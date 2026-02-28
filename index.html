@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Asistencia Spaces | Musicala</title>
+
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+
+  <!-- ================= HEADER ================= -->
+  <header class="app-header">
+    <div class="header-left">
+      <img src="./assets/logo.png" alt="Musicala" class="logo" />
+      <div class="header-title">
+        <h1>Asistencia Spaces</h1>
+        <span id="currentContext">Sin taller seleccionado</span>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <span id="connectionStatus" class="status-dot online"></span>
+      <span class="status-text">Conectado</span>
+    </div>
+  </header>
+
+  <!-- ================= MAIN ================= -->
+  <main class="app-main">
+
+    <!-- ============ DASHBOARD ============ -->
+    <section id="view-dashboard" class="view active">
+
+      <div class="card">
+        <h2>Seleccionar contexto</h2>
+
+        <div class="field-group">
+          <label>Empresa</label>
+          <div class="inline">
+            <select id="empresaSelect"></select>
+            <button id="btnNuevaEmpresa" class="btn-secondary">+ Nueva</button>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label>Taller</label>
+          <div class="inline">
+            <select id="tallerSelect"></select>
+            <button id="btnNuevoTaller" class="btn-secondary">+ Nuevo</button>
+          </div>
+        </div>
+
+        <div id="tallerInfo" class="taller-info"></div>
+      </div>
+
+      <div class="card actions-card">
+        <button id="btnIrParticipantes" class="btn-primary">Participantes</button>
+        <button id="btnIrSesiones" class="btn-primary">Sesiones</button>
+        <button id="btnIrReportes" class="btn-primary">Reportes</button>
+      </div>
+
+    </section>
+
+    <!-- ============ PARTICIPANTES ============ -->
+    <section id="view-participantes" class="view">
+
+      <div class="view-header">
+        <h2>Participantes</h2>
+        <div>
+          <button id="btnVolverDashboard1" class="btn-secondary">Volver</button>
+          <button id="btnAgregarParticipante" class="btn-primary">+ Agregar</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <input type="text" id="buscarParticipante" placeholder="Buscar participante..." class="search-input" />
+        <div id="participantesTableContainer"></div>
+      </div>
+
+    </section>
+
+    <!-- ============ SESIONES ============ -->
+    <section id="view-sesiones" class="view">
+
+      <div class="view-header">
+        <h2>Sesiones</h2>
+        <div>
+          <button id="btnVolverDashboard2" class="btn-secondary">Volver</button>
+          <button id="btnNuevaSesion" class="btn-primary">+ Nueva sesión</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div id="sesionesListContainer"></div>
+      </div>
+
+    </section>
+
+    <!-- ============ ASISTENCIA ============ -->
+    <section id="view-asistencia" class="view">
+
+      <div class="view-header">
+        <h2>Marcar asistencia</h2>
+        <div>
+          <button id="btnVolverSesiones" class="btn-secondary">Volver</button>
+          <button id="btnGuardarAsistencia" class="btn-primary">Guardar</button>
+        </div>
+      </div>
+
+      <div class="card asistencia-card">
+
+        <div class="asistencia-summary">
+          <span id="countAsistio">0 Asistieron</span>
+          <span id="countNo">0 No asistieron</span>
+          <span id="countTarde">0 Tarde</span>
+          <span id="countSinMarcar">0 Sin marcar</span>
+        </div>
+
+        <div id="asistenciaListContainer"></div>
+
+      </div>
+
+    </section>
+
+    <!-- ============ REPORTES ============ -->
+    <section id="view-reportes" class="view">
+
+      <div class="view-header">
+        <h2>Reportes</h2>
+        <div>
+          <button id="btnVolverDashboard3" class="btn-secondary">Volver</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div id="reportesContainer"></div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ================= MODALES ================= -->
+
+  <!-- Modal Empresa -->
+  <dialog id="modalEmpresa">
+    <form method="dialog" class="modal-content">
+      <h3>Nueva Empresa</h3>
+
+      <input type="text" id="inputEmpresaNombre" placeholder="Nombre de la empresa" required />
+      <input type="text" id="inputEmpresaContacto" placeholder="Contacto (opcional)" />
+      <input type="text" id="inputEmpresaTelefono" placeholder="Teléfono (opcional)" />
+      <input type="email" id="inputEmpresaEmail" placeholder="Email (opcional)" />
+
+      <div class="modal-actions">
+        <button value="cancel" class="btn-secondary">Cancelar</button>
+        <button id="confirmCrearEmpresa" class="btn-primary">Crear</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal Taller -->
+  <dialog id="modalTaller">
+    <form method="dialog" class="modal-content">
+      <h3>Nuevo Taller</h3>
+
+      <input type="text" id="inputTallerNombre" placeholder="Nombre del taller" required />
+      <input type="date" id="inputFechaInicio" />
+      <input type="date" id="inputFechaFin" />
+      <input type="text" id="inputFacilitador" placeholder="Facilitador" />
+
+      <div class="modal-actions">
+        <button value="cancel" class="btn-secondary">Cancelar</button>
+        <button id="confirmCrearTaller" class="btn-primary">Crear</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal Participante -->
+  <dialog id="modalParticipante">
+    <form method="dialog" class="modal-content">
+      <h3>Nuevo Participante</h3>
+
+      <input type="text" id="inputParticipanteNombre" placeholder="Nombre completo" required />
+      <input type="text" id="inputParticipanteDocumento" placeholder="Documento (opcional)" />
+      <input type="text" id="inputParticipanteTelefono" placeholder="Teléfono (opcional)" />
+      <input type="email" id="inputParticipanteEmail" placeholder="Email (opcional)" />
+
+      <div class="modal-actions">
+        <button value="cancel" class="btn-secondary">Cancelar</button>
+        <button id="confirmCrearParticipante" class="btn-primary">Crear</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Toast container -->
+  <div id="toastHost" class="toast-host"></div>
+
+  <!-- ================= SCRIPTS ================= -->
+  <script src="./js/utils.js"></script>
+  <script src="./js/store.js"></script>
+  <script src="./js/api.js"></script>
+  <script src="./js/ui.js"></script>
+  <script src="./js/dialog.js"></script>
+  <script src="./js/app.js"></script>
+
+</body>
+</html>

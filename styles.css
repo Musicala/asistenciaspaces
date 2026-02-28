@@ -1,0 +1,561 @@
+/* ==========================================================================
+   Asistencia Spaces | Musicala — styles.css (Light Only)
+   - Sin PWA, sin frameworks
+   - UI clara, premium, usable en desktop y celular
+   - Compatible con tu index.html actual
+============================================================================ */
+
+:root{
+  /* Brand-ish */
+  --bg: #f6f8ff;
+  --text:#0b1020;
+  --muted: rgba(11,16,32,.64);
+  --line: rgba(11,16,32,.10);
+
+  --mozart:#0C41C4;
+  --beethoven:#680DBF;
+  --brahms:#CE0071;
+
+  /* Surfaces */
+  --card: rgba(255,255,255,.78);
+  --card2: rgba(255,255,255,.90);
+  --shadow: 0 14px 40px rgba(10, 18, 45, .10);
+  --shadow2: 0 8px 18px rgba(10, 18, 45, .10);
+
+  /* Inputs */
+  --inputBg: rgba(255,255,255,.92);
+
+  /* Radius / spacing */
+  --r-xl: 22px;
+  --r-lg: 16px;
+  --r-md: 12px;
+
+  --pad-1: 10px;
+  --pad-2: 14px;
+  --pad-3: 18px;
+  --pad-4: 24px;
+
+  /* Typography */
+  --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+}
+
+/* ==========================================================================
+   Base
+============================================================================ */
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  font-family: var(--font);
+  color: var(--text);
+  background:
+    radial-gradient(1200px 600px at 18% 5%, rgba(12,65,196,.12), transparent 55%),
+    radial-gradient(900px 600px at 70% 18%, rgba(104,13,191,.10), transparent 55%),
+    radial-gradient(900px 600px at 55% 78%, rgba(206,0,113,.08), transparent 55%),
+    var(--bg);
+  letter-spacing: .2px;
+}
+
+a{ color: var(--mozart); text-decoration:none; }
+a:hover{ text-decoration:underline; }
+
+h1,h2,h3{ margin:0; }
+h1{ font-size:18px; line-height:1.15; letter-spacing:.3px; }
+h2{ font-size:16px; margin-bottom:10px; }
+h3{ font-size:15px; }
+
+::selection{ background: rgba(12,65,196,.16); }
+
+/* ==========================================================================
+   Header
+============================================================================ */
+.app-header{
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255,255,255,.72);
+  backdrop-filter: blur(14px);
+}
+
+.header-left{
+  display:flex;
+  align-items:center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.logo{
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: rgba(255,255,255,.8);
+  box-shadow: var(--shadow2);
+  padding: 6px;
+}
+
+.header-title{
+  display:flex;
+  flex-direction:column;
+  gap: 2px;
+  min-width: 0;
+}
+
+#currentContext{
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow:hidden;
+  text-overflow: ellipsis;
+  max-width: min(52vw, 520px);
+}
+
+.header-right{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.status-dot{
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display:inline-block;
+  box-shadow: 0 0 0 4px rgba(12,65,196,.12);
+}
+.status-dot.online{ background: #22c55e; box-shadow: 0 0 0 4px rgba(34,197,94,.14); }
+.status-dot.offline{ background: #f59e0b; box-shadow: 0 0 0 4px rgba(245,158,11,.16); }
+.status-dot.error{ background: #ef4444; box-shadow: 0 0 0 4px rgba(239,68,68,.14); }
+
+.status-text{ user-select:none; }
+
+/* ==========================================================================
+   Layout
+============================================================================ */
+.app-main{
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 18px;
+}
+
+.view{ display:none; }
+.view.active{ display:block; }
+
+.view-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  margin: 10px 0 14px;
+}
+
+.view-header h2{
+  font-size: 18px;
+  letter-spacing: .2px;
+}
+
+/* ==========================================================================
+   Cards
+============================================================================ */
+.card{
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow);
+  padding: var(--pad-4);
+  margin-bottom: 14px;
+  backdrop-filter: blur(10px);
+}
+
+.actions-card{
+  display:flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.taller-info{
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: var(--r-lg);
+  border: 1px dashed rgba(11,16,32,.16);
+  color: var(--muted);
+  background: rgba(255,255,255,.6);
+}
+.taller-info:empty{
+  padding: 0;
+  border: none;
+  background: transparent;
+  margin-top: 0;
+}
+
+/* ==========================================================================
+   Forms / Inputs
+============================================================================ */
+.field-group{
+  margin-top: 12px;
+}
+
+label{
+  display:block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.inline{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+}
+
+select,
+input[type="text"],
+input[type="email"],
+input[type="date"],
+input[type="time"]{
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(11,16,32,.14);
+  background: var(--inputBg);
+  color: var(--text);
+  outline: none;
+  box-shadow: 0 1px 0 rgba(255,255,255,.7) inset;
+}
+
+select{
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(11,16,32,.55) 50%),
+    linear-gradient(135deg, rgba(11,16,32,.55) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 2px),
+    calc(100% - 12px) calc(50% - 2px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 34px;
+}
+
+select:focus,
+input:focus{
+  border-color: rgba(12,65,196,.35);
+  box-shadow: 0 0 0 5px rgba(12,65,196,.12);
+}
+
+.search-input{
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+/* ==========================================================================
+   Buttons
+============================================================================ */
+button{
+  border: none;
+  cursor: pointer;
+  border-radius: 16px;
+  padding: 12px 14px;
+  font-weight: 650;
+  letter-spacing: .2px;
+  user-select:none;
+  transition: transform .06s ease, box-shadow .12s ease, filter .12s ease;
+}
+
+button:active{ transform: translateY(1px); }
+button:disabled{
+  opacity: .55;
+  cursor: not-allowed;
+  filter: grayscale(.25);
+}
+
+.btn-primary{
+  background: linear-gradient(135deg, rgba(12,65,196,.95), rgba(104,13,191,.92));
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(12,65,196,.18);
+}
+.btn-primary:hover{ filter: brightness(1.02); }
+
+.btn-secondary{
+  background: rgba(255,255,255,.9);
+  color: var(--text);
+  border: 1px solid rgba(11,16,32,.14);
+  box-shadow: 0 8px 16px rgba(10,18,45,.08);
+}
+.btn-secondary:hover{ filter: brightness(1.01); }
+
+.actions-card .btn-primary{
+  flex: 1 1 200px;
+  min-width: 200px;
+}
+
+/* ==========================================================================
+   Tables / Lists containers (rendered by JS)
+============================================================================ */
+.table{
+  width:100%;
+  border-collapse: collapse;
+  overflow:hidden;
+  border-radius: var(--r-lg);
+  border: 1px solid rgba(11,16,32,.10);
+  background: rgba(255,255,255,.8);
+}
+
+.table th, .table td{
+  padding: 12px 12px;
+  border-bottom: 1px solid rgba(11,16,32,.08);
+  font-size: 13px;
+  text-align:left;
+}
+
+.table th{
+  font-size: 12px;
+  color: rgba(11,16,32,.70);
+  background: rgba(245,247,255,.9);
+}
+
+.table tr:hover td{
+  background: rgba(12,65,196,.05);
+}
+
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 650;
+  border: 1px solid rgba(11,16,32,.12);
+  background: rgba(255,255,255,.78);
+}
+
+.badge.ok{ border-color: rgba(34,197,94,.25); background: rgba(34,197,94,.10); }
+.badge.warn{ border-color: rgba(245,158,11,.28); background: rgba(245,158,11,.10); }
+.badge.bad{ border-color: rgba(239,68,68,.25); background: rgba(239,68,68,.10); }
+
+/* ==========================================================================
+   Asistencia view
+============================================================================ */
+.asistencia-card{
+  padding: 18px;
+}
+
+.asistencia-summary{
+  display:flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border-radius: var(--r-lg);
+  border: 1px solid rgba(11,16,32,.10);
+  background: rgba(255,255,255,.72);
+  color: rgba(11,16,32,.78);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.asistencia-summary span{
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(11,16,32,.10);
+  background: rgba(255,255,255,.82);
+}
+
+/* Attendance list item helpers (si ui.js los usa) */
+.person-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  padding: 12px 12px;
+  border-radius: var(--r-lg);
+  border: 1px solid rgba(11,16,32,.10);
+  background: rgba(255,255,255,.84);
+  margin-bottom: 10px;
+}
+
+.person-name{
+  display:flex;
+  flex-direction:column;
+  gap: 2px;
+  min-width: 0;
+}
+.person-name strong{
+  font-size: 13px;
+}
+.person-name small{
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.person-actions{
+  display:flex;
+  gap: 8px;
+  align-items:center;
+}
+
+.chip{
+  border-radius: 999px;
+  padding: 9px 12px;
+  border: 1px solid rgba(11,16,32,.12);
+  background: rgba(255,255,255,.9);
+  font-weight: 750;
+  font-size: 12px;
+  min-width: 44px;
+  text-align:center;
+  box-shadow: 0 6px 12px rgba(10,18,45,.06);
+}
+.chip:hover{ filter: brightness(1.01); }
+
+.chip.ok{ border-color: rgba(34,197,94,.25); background: rgba(34,197,94,.12); }
+.chip.no{ border-color: rgba(239,68,68,.25); background: rgba(239,68,68,.10); }
+.chip.tarde{ border-color: rgba(245,158,11,.28); background: rgba(245,158,11,.12); }
+
+.note-input{
+  margin-top: 8px;
+  width: 100%;
+}
+
+/* ==========================================================================
+   Dialogs / Modals
+============================================================================ */
+dialog{
+  border: none;
+  border-radius: 20px;
+  padding: 0;
+  width: min(560px, calc(100vw - 28px));
+  box-shadow: 0 30px 80px rgba(10,18,45,.20);
+  background: rgba(255,255,255,.96);
+}
+
+dialog::backdrop{
+  background: rgba(5, 10, 22, .45);
+  backdrop-filter: blur(3px);
+}
+
+.modal-content{
+  padding: 18px;
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+}
+
+.modal-content h3{
+  margin-bottom: 6px;
+}
+
+.modal-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.modal-content input{
+  width: 100%;
+}
+
+/* ==========================================================================
+   Toasts
+============================================================================ */
+.toast-host{
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+  z-index: 999;
+  pointer-events:none;
+}
+
+.toast{
+  pointer-events:auto;
+  min-width: 240px;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(11,16,32,.14);
+  background: rgba(255,255,255,.92);
+  box-shadow: 0 18px 40px rgba(10,18,45,.14);
+  color: rgba(11,16,32,.88);
+  font-size: 13px;
+  display:flex;
+  align-items:flex-start;
+  gap: 10px;
+}
+
+.toast .dot{
+  width: 10px; height: 10px; border-radius: 50%;
+  margin-top: 4px;
+  background: var(--mozart);
+  box-shadow: 0 0 0 4px rgba(12,65,196,.12);
+}
+.toast.ok .dot{ background:#22c55e; box-shadow: 0 0 0 4px rgba(34,197,94,.14); }
+.toast.warn .dot{ background:#f59e0b; box-shadow: 0 0 0 4px rgba(245,158,11,.16); }
+.toast.bad .dot{ background:#ef4444; box-shadow: 0 0 0 4px rgba(239,68,68,.14); }
+
+.toast .msg{
+  flex: 1;
+}
+
+/* ==========================================================================
+   Empty states (si ui.js los usa)
+============================================================================ */
+.empty{
+  padding: 18px;
+  border-radius: var(--r-lg);
+  border: 1px dashed rgba(11,16,32,.18);
+  background: rgba(255,255,255,.65);
+  color: var(--muted);
+}
+
+.hr{
+  height: 1px;
+  background: rgba(11,16,32,.10);
+  margin: 12px 0;
+  border: none;
+}
+
+/* ==========================================================================
+   Responsive
+============================================================================ */
+@media (max-width: 720px){
+  .app-main{ padding: 14px; }
+  .card{ padding: 16px; }
+  .actions-card{ gap: 8px; }
+  .actions-card .btn-primary{
+    min-width: 0;
+    flex: 1 1 48%;
+  }
+  #currentContext{
+    max-width: 48vw;
+  }
+  .inline{
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .view-header{
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .view-header > div{
+    display:flex;
+    gap: 10px;
+  }
+  .person-row{
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .person-actions{
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}
