@@ -1,6 +1,14 @@
-/* app.js — Asistencia Spaces (v1.0)
+/* app.js — Asistencia Spaces (v1.3)
    Navegación + orquestación de data + eventos UI
    Requiere: utils.js, store.js, api.js, ui.js, dialog.js
+
+   ✅ v1.3 (mejorado):
+   - Botón “Tiempo real” consistente (clases correctas, sin “btn secondary” fantasma)
+   - Render más estable: evita re-binds repetidos, y refrescos innecesarios
+   - Conexión: usa #connectionText si existe (y fallback al .status-text)
+   - Reportes: carga asistencias en paralelo con límite (no se muere por 40 sesiones)
+   - UX: conserva borrador, muestra meta de sesión si existe #sesionMetaBox
+   - Null-safety y logs más claros
 */
 
 (() => {
@@ -13,7 +21,7 @@
     // Context
     currentContext: $("#currentContext"),
     connectionDot: $("#connectionStatus"),
-    connectionText: document.querySelector(".status-text"),
+    connectionText: $("#connectionText") || document.querySelector(".status-text"),
 
     // Views
     views: {
@@ -49,11 +57,17 @@
     // Asistencia
     btnVolverSesiones: $("#btnVolverSesiones"),
     btnGuardarAsistencia: $("#btnGuardarAsistencia"),
+
+    // Opcional: si existe este botón en tu HTML, lo usamos.
+    btnTiempoRealSesion: $("#btnTiempoRealSesion"),
+
     asistenciaListContainer: $("#asistenciaListContainer"),
     countAsistio: $("#countAsistio"),
     countNo: $("#countNo"),
     countTarde: $("#countTarde"),
     countSinMarcar: $("#countSinMarcar"),
+
+    sesionMetaBox: $("#sesionMetaBox"),
 
     // Reportes
     btnVolverDashboard3: $("#btnVolverDashboard3"),
@@ -73,14 +87,15 @@
 
   // ====== State (runtime) ======
   let activeView = "dashboard";
-  let activeSesionId = null; // cuando entramos a marcar
-  let asistenciaDraft = null; // { sesionId, tallerId, map: { participanteId: {estado, nota} } }
+  let activeSesionId = null;       // cuando entramos a marcar
+  let activeSesionObj = null;      // cache de la sesión abierta
+  let asistenciaDraft = null;      // { sesionId, tallerId, map: { participanteId: {estado, nota} } }
 
   // ====== Boot ======
   document.addEventListener("DOMContentLoaded", init);
 
   async function init() {
-    bindEvents();
+    bindEventsOnce_();
     UI.init?.();
 
     // Estado inicial desde localStorage
@@ -93,7 +108,9 @@
     go_("dashboard");
   }
 
-  // ====== Navigation ======
+  // =========================
+  // Navigation
+  // =========================
   function go_(name) {
     activeView = name;
     Object.entries(el.views).forEach(([k, node]) => {
@@ -101,12 +118,17 @@
       node.classList.toggle("active", k === name);
     });
 
-    // focus friendly
     if (name === "participantes") el.buscarParticipante?.focus?.();
   }
 
-  // ====== Events ======
-  function bindEvents() {
+  // =========================
+  // Events (bind once)
+  // =========================
+  let _eventsBound = false;
+  function bindEventsOnce_() {
+    if (_eventsBound) return;
+    _eventsBound = true;
+
     // Dashboard actions
     el.btnNuevaEmpresa?.addEventListener("click", onNuevaEmpresa_);
     el.btnNuevoTaller?.addEventListener("click", onNuevoTaller_);
@@ -125,30 +147,36 @@
 
     // Participantes
     el.btnAgregarParticipante?.addEventListener("click", onAgregarParticipante_);
-    el.buscarParticipante?.addEventListener("input", Utils.debounce?.(() => {
-      renderParticipantes_();
-    }, 120) || (() => renderParticipantes_()));
+    const debouncedSearch = Utils.debounce
+      ? Utils.debounce(() => renderParticipantes_(), 140)
+      : () => renderParticipantes_();
+    el.buscarParticipante?.addEventListener("input", debouncedSearch);
 
     // Sesiones
     el.btnNuevaSesion?.addEventListener("click", onNuevaSesion_);
 
     // Asistencia
     el.btnVolverSesiones?.addEventListener("click", async () => {
-      // guardar draft local ya queda guardado mientras marcan
       activeSesionId = null;
+      activeSesionObj = null;
       asistenciaDraft = null;
       go_("sesiones");
-      await loadSesiones_(); // refresca conteos si UI los muestra
+      await loadSesiones_();
     });
 
     el.btnGuardarAsistencia?.addEventListener("click", onGuardarAsistencia_);
+
+    // Tiempo real de sesión (si existe)
+    el.btnTiempoRealSesion?.addEventListener("click", onTiempoRealSesion_);
 
     // Online/offline status
     window.addEventListener("online", refreshConnection_);
     window.addEventListener("offline", refreshConnection_);
   }
 
-  // ====== Connection ======
+  // =========================
+  // Connection
+  // =========================
   async function refreshConnection_() {
     const online = navigator.onLine;
     UI.setConnection?.(online);
@@ -159,41 +187,39 @@
     }
     if (el.connectionText) el.connectionText.textContent = online ? "Conectado" : "Sin conexión";
 
-    // Ping real si hay internet
-    if (online) {
-      try {
-        await API.ping();
-        if (el.connectionDot) {
-          el.connectionDot.classList.remove("error");
-          el.connectionDot.classList.add("online");
-        }
-        if (el.connectionText) el.connectionText.textContent = "Conectado";
-      } catch (e) {
-        if (el.connectionDot) {
-          el.connectionDot.classList.remove("online");
-          el.connectionDot.classList.add("error");
-        }
-        if (el.connectionText) el.connectionText.textContent = "Error API";
+    if (!online) return;
+
+    try {
+      await API.ping();
+      if (el.connectionDot) {
+        el.connectionDot.classList.remove("error", "offline");
+        el.connectionDot.classList.add("online");
       }
+      if (el.connectionText) el.connectionText.textContent = "Conectado";
+    } catch (_e) {
+      if (el.connectionDot) {
+        el.connectionDot.classList.remove("online", "offline");
+        el.connectionDot.classList.add("error");
+      }
+      if (el.connectionText) el.connectionText.textContent = "Error API";
     }
   }
 
-  // ====== Dashboard data load ======
+  // =========================
+  // Dashboard load/render
+  // =========================
   async function loadDashboardData_() {
     UI.block?.(true);
 
     try {
-      // 1) Empresas
       const empresas = await API.listEmpresas();
       Store.setEmpresas?.(empresas);
 
-      // Selección guardada o primera
       let empresaId = Store.getSelectedEmpresaId?.();
       if (!empresaId && empresas.length) empresaId = empresas[0].empresaId;
 
       Store.setSelectedEmpresaId?.(empresaId || "");
 
-      // 2) Talleres de empresa
       if (empresaId) {
         const talleres = await API.listTalleresByEmpresa(empresaId);
         Store.setTalleres?.(talleres);
@@ -232,28 +258,22 @@
     const empresa = empresas.find(x => String(x.empresaId) === String(empresaId));
     const taller = talleres.find(x => String(x.tallerId) === String(tallerId));
 
-    // Context label
     const label = taller
       ? `${empresa?.empresaNombre || "Empresa"} · ${taller.tallerNombre}`
       : (empresa ? `${empresa.empresaNombre} · sin taller` : "Sin taller seleccionado");
 
     if (el.currentContext) el.currentContext.textContent = label;
-
-    // Taller info card
     if (el.tallerInfo) el.tallerInfo.innerHTML = UI.renderTallerInfo?.(taller, empresa) || "";
 
-    // Enable/disable actions
     const hasTaller = !!tallerId;
-    [el.btnIrParticipantes, el.btnIrSesiones, el.btnIrReportes, el.btnNuevoTaller].forEach(b => {
+
+    // habilitadores coherentes
+    if (el.btnNuevoTaller) el.btnNuevoTaller.disabled = !empresaId;
+    [el.btnIrParticipantes, el.btnIrSesiones, el.btnIrReportes].forEach(b => {
       if (!b) return;
-      if (b === el.btnNuevoTaller) {
-        b.disabled = !empresaId;
-      } else {
-        b.disabled = !hasTaller;
-      }
+      b.disabled = !hasTaller;
     });
 
-    // Empty states cues (optional)
     UI.renderDashboardEmptyStates?.({
       empresasCount: empresas.length,
       talleresCount: talleres.length,
@@ -292,7 +312,9 @@
     renderDashboard_();
   }
 
-  // ====== Create flows ======
+  // =========================
+  // Create flows
+  // =========================
   async function onNuevaEmpresa_() {
     const data = await Dialogs.promptEmpresa?.();
     if (!data) return;
@@ -304,7 +326,6 @@
 
       await loadDashboardData_();
 
-      // Selecciona la nueva si viene
       if (res?.empresa?.empresaId) {
         Store.setSelectedEmpresaId?.(res.empresa.empresaId);
         await onEmpresaChange_();
@@ -333,11 +354,9 @@
       const res = await API.createTaller(payload);
       Utils.toast?.("Taller creado ✅", "ok");
 
-      // refresca talleres
       const talleres = await API.listTalleresByEmpresa(empresaId);
       Store.setTalleres?.(talleres);
 
-      // selecciona nuevo
       if (res?.taller?.tallerId) Store.setSelectedTallerId?.(res.taller.tallerId);
 
       renderDashboard_();
@@ -349,7 +368,9 @@
     }
   }
 
-  // ====== Participantes view ======
+  // =========================
+  // Participantes view
+  // =========================
   async function openParticipantes_() {
     const tallerId = Store.getSelectedTallerId?.() || "";
     if (!tallerId) return;
@@ -387,7 +408,6 @@
       UI.fallbackParticipantesTable?.(filtered) ||
       "";
 
-    // Delegated actions (toggle activo)
     UI.bindParticipantesTableActions?.({
       root: el.participantesTableContainer,
       onToggleActivo: onToggleParticipanteActivo_,
@@ -403,14 +423,12 @@
 
     UI.block?.(true);
     try {
-      const res = await API.createParticipante({ ...data, tallerId });
+      await API.createParticipante({ ...data, tallerId });
       Utils.toast?.("Participante agregado ✅", "ok");
 
-      // refresca lista
       const participantes = await API.listParticipantesByTaller(tallerId);
       Store.setParticipantes?.(participantes);
       renderParticipantes_();
-
     } catch (e) {
       console.error(e);
       Utils.toast?.("No se pudo agregar el participante.", "bad");
@@ -423,7 +441,6 @@
     UI.block?.(true);
     try {
       await API.updateParticipante({ participanteId, activo: activoSIoNO });
-      // actualiza store local sin recargar todo
       Store.patchParticipanteActivo?.(participanteId, activoSIoNO);
       renderParticipantes_();
     } catch (e) {
@@ -434,7 +451,9 @@
     }
   }
 
-  // ====== Sesiones view ======
+  // =========================
+  // Sesiones view
+  // =========================
   async function openSesiones_() {
     const tallerId = Store.getSelectedTallerId?.() || "";
     if (!tallerId) return;
@@ -472,6 +491,7 @@
     UI.bindSesionesActions?.({
       root: el.sesionesListContainer,
       onOpenSesion: openAsistenciaForSesion_,
+      onTiempoReal: (sid) => openAsistenciaForSesion_(sid).then(() => onTiempoRealSesion_()),
     });
   }
 
@@ -489,12 +509,10 @@
       const res = await API.createSesion({ ...data, tallerId });
       Utils.toast?.("Sesión creada ✅", "ok");
 
-      // refresca sesiones
       const sesiones = await API.listSesionesByTaller(tallerId);
       Store.setSesiones?.(sesiones);
       renderSesiones_();
 
-      // opcional: abrir asistencia de una
       if (res?.sesion?.sesionId) {
         await openAsistenciaForSesion_(res.sesion.sesionId);
       }
@@ -506,33 +524,38 @@
     }
   }
 
-  // ====== Asistencia view ======
+  // =========================
+  // Asistencia view
+  // =========================
   async function openAsistenciaForSesion_(sesionId) {
     const tallerId = Store.getSelectedTallerId?.() || "";
     if (!tallerId || !sesionId) return;
 
-    activeSesionId = sesionId;
+    activeSesionId = String(sesionId);
     go_("asistencia");
 
     UI.block?.(true);
     try {
-      // Cargar participantes + asistencias existentes
+      const sesiones = Store.getSesiones?.() || [];
+      activeSesionObj = sesiones.find(s => String(s.sesionId) === activeSesionId) || null;
+
       const [participantes, asistencias] = await Promise.all([
         API.listParticipantesByTaller(tallerId),
-        API.getAsistenciaBySesion(sesionId),
+        API.getAsistenciaBySesion(activeSesionId),
       ]);
 
       Store.setParticipantes?.(participantes);
 
-      // Draft: intenta recuperar de localStorage (por si estaban marcando)
-      asistenciaDraft = Store.loadDraftAsistencia?.(sesionId) || {
-        sesionId,
+      // draft primero (para no perder lo que ya venías haciendo)
+      asistenciaDraft = Store.loadDraftAsistencia?.(activeSesionId) || {
+        sesionId: activeSesionId,
         tallerId,
         map: {}
       };
 
-      // Si no hay draft pero sí asistencias en backend, úsalo como base
-      if (Object.keys(asistenciaDraft.map || {}).length === 0 && Array.isArray(asistencias) && asistencias.length) {
+      // si draft vacío y hay data en backend, hidrata
+      const draftEmpty = Object.keys(asistenciaDraft.map || {}).length === 0;
+      if (draftEmpty && Array.isArray(asistencias) && asistencias.length) {
         asistenciaDraft.map = {};
         asistencias.forEach(a => {
           asistenciaDraft.map[String(a.participanteId)] = {
@@ -542,24 +565,55 @@
         });
       }
 
+      ensureTiempoRealButton_();
       renderAsistencia_();
 
     } catch (e) {
       console.error(e);
       Utils.toast?.("No se pudo cargar la asistencia de la sesión.", "bad");
-      asistenciaDraft = { sesionId, tallerId, map: {} };
+      asistenciaDraft = { sesionId: activeSesionId, tallerId, map: {} };
+      ensureTiempoRealButton_();
       renderAsistencia_();
     } finally {
       UI.block?.(false);
     }
   }
 
+  function ensureTiempoRealButton_() {
+    // Si ya existe (en HTML o creado antes), listo.
+    if (el.btnTiempoRealSesion) {
+      // asegura clases correctas por si venía mal
+      el.btnTiempoRealSesion.classList.add("btn-secondary");
+      el.btnTiempoRealSesion.classList.remove("btn", "secondary");
+      el.btnTiempoRealSesion.type = "button";
+      return;
+    }
+
+    // lo creamos junto al botón Guardar, en la barra de acciones del header de asistencia
+    const saveBtn = el.btnGuardarAsistencia;
+    const parent = saveBtn?.parentNode;
+    if (!saveBtn || !parent) return;
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.id = "btnTiempoRealSesion";
+    btn.className = "btn-secondary";
+    btn.textContent = "⏱️ Tiempo real";
+    btn.title = "Registrar hora real de inicio/fin";
+    btn.addEventListener("click", onTiempoRealSesion_);
+
+    parent.insertBefore(btn, saveBtn);
+    el.btnTiempoRealSesion = btn;
+  }
+
   function renderAsistencia_() {
     const participantes = Store.getParticipantes?.() || [];
-    const activos = UI.onlyActivos?.(participantes) || participantes.filter(p => String(p.activo||"SI").toUpperCase() !== "NO");
+    const activos = UI.onlyActivos?.(participantes)
+      || participantes.filter(p => String(p?.activo || "SI").toUpperCase() !== "NO");
 
+    // meta: si UI soporta sesionObj, se la pasamos
     el.asistenciaListContainer.innerHTML =
-      UI.renderAsistenciaList?.(activos, asistenciaDraft?.map || {}) ||
+      UI.renderAsistenciaList?.(activos, asistenciaDraft?.map || {}, activeSesionObj) ||
       UI.fallbackAsistenciaList?.(activos, asistenciaDraft?.map || {}) ||
       "";
 
@@ -569,24 +623,29 @@
       onNote: onNoteAsistencia_,
     });
 
+    // meta arriba (si existe mount)
+    UI.renderSesionMeta?.(activeSesionObj, "#sesionMetaBox");
+
     updateAsistenciaCounters_();
   }
 
   function onMarkAsistencia_(participanteId, estado) {
     if (!asistenciaDraft) return;
-    const pid = String(participanteId);
+    const pid = String(participanteId ?? "");
+    if (!pid) return;
 
     asistenciaDraft.map[pid] = asistenciaDraft.map[pid] || { estado:"", nota:"" };
     asistenciaDraft.map[pid].estado = estado;
 
     Store.saveDraftAsistencia?.(asistenciaDraft.sesionId, asistenciaDraft);
-    UI.updateRowState?.(pid, asistenciaDraft.map[pid]); // opcional si UI lo soporta
+    UI.updateRowState?.(pid, asistenciaDraft.map[pid]);
     updateAsistenciaCounters_();
   }
 
   function onNoteAsistencia_(participanteId, nota) {
     if (!asistenciaDraft) return;
-    const pid = String(participanteId);
+    const pid = String(participanteId ?? "");
+    if (!pid) return;
 
     asistenciaDraft.map[pid] = asistenciaDraft.map[pid] || { estado:"", nota:"" };
     asistenciaDraft.map[pid].nota = String(nota || "");
@@ -596,12 +655,12 @@
 
   function updateAsistenciaCounters_() {
     const participantes = Store.getParticipantes?.() || [];
-    const activos = participantes.filter(p => String(p.activo||"SI").toUpperCase() !== "NO");
+    const activos = participantes.filter(p => String(p?.activo || "SI").toUpperCase() !== "NO");
 
     let asistio = 0, no = 0, tarde = 0, sin = 0;
 
     activos.forEach(p => {
-      const pid = String(p.participanteId);
+      const pid = String(p?.participanteId ?? "");
       const st = (asistenciaDraft?.map?.[pid]?.estado || "").toUpperCase();
       if (!st) sin++;
       else if (st === "ASISTIO") asistio++;
@@ -621,15 +680,14 @@
 
     const tallerId = Store.getSelectedTallerId?.() || "";
     const participantes = Store.getParticipantes?.() || [];
-    const activos = participantes.filter(p => String(p.activo||"SI").toUpperCase() !== "NO");
+    const activos = participantes.filter(p => String(p?.activo || "SI").toUpperCase() !== "NO");
 
-    // Construye batch solo con activos (o con todos si prefieren)
     const rows = activos.map(p => {
-      const pid = String(p.participanteId);
+      const pid = String(p?.participanteId ?? "");
       const it = asistenciaDraft.map[pid] || { estado:"", nota:"" };
       return {
         participanteId: pid,
-        estado: String(it.estado || ""), // si está vacío queda vacío (backend lo guarda igual)
+        estado: String(it.estado || ""),
         nota: String(it.nota || ""),
       };
     });
@@ -644,8 +702,6 @@
       });
 
       Utils.toast?.("Asistencia guardada ✅", "ok");
-
-      // Limpia draft local (ya quedó en backend)
       Store.clearDraftAsistencia?.(activeSesionId);
 
     } catch (e) {
@@ -656,7 +712,68 @@
     }
   }
 
-  // ====== Reportes (MVP simple) ======
+  // ==========================================================
+  // TIEMPO REAL SESIÓN
+  // ==========================================================
+  async function onTiempoRealSesion_() {
+    if (!activeSesionId) {
+      Utils.toast?.("Abre una sesión primero.", "warn");
+      return;
+    }
+
+    if (typeof Dialogs.promptTiempoRealSesion !== "function") {
+      Utils.toast?.("Dialogs.promptTiempoRealSesion no existe. Revisa dialog.js.", "bad");
+      return;
+    }
+
+    if (typeof API.updateSesion !== "function") {
+      Utils.toast?.("Falta API.updateSesion (backend/action updateSesion). La UI ya está lista.", "warn");
+      return;
+    }
+
+    // sugerencias
+    const fechaLabel = activeSesionObj?.fecha ? String(activeSesionObj.fecha) : "";
+    const horaInicioSug = activeSesionObj?.horaInicio ? String(activeSesionObj.horaInicio) : "";
+    const horaFinSug = activeSesionObj?.horaFin ? String(activeSesionObj.horaFin) : "";
+
+    const patch = await Dialogs.promptTiempoRealSesion({
+      fechaLabel,
+      horaInicioSugerida: horaInicioSug,
+      horaFinSugerida: horaFinSug
+    });
+
+    if (!patch) return;
+
+    UI.block?.(true);
+    try {
+      const res = await API.updateSesion({
+        sesionId: activeSesionId,
+        ...patch
+      });
+
+      // cache local
+      activeSesionObj = { ...(activeSesionObj || {}), ...patch };
+
+      // parchea store si existe
+      Store.patchSesion?.(activeSesionId, patch);
+
+      // refresca sin recargar todo
+      renderAsistencia_();
+
+      Utils.toast?.("Tiempo real guardado ✅", "ok");
+      return res;
+
+    } catch (e) {
+      console.error(e);
+      Utils.toast?.("No se pudo guardar el tiempo real.", "bad");
+    } finally {
+      UI.block?.(false);
+    }
+  }
+
+  // =========================
+  // Reportes (MVP)
+  // =========================
   async function openReportes_() {
     const tallerId = Store.getSelectedTallerId?.() || "";
     if (!tallerId) return;
@@ -671,19 +788,13 @@
 
     UI.block?.(true);
     try {
-      // Para MVP: arma reportes con data base (participantes+sesiones+asistencias por sesión)
       const [participantes, sesiones] = await Promise.all([
         API.listParticipantesByTaller(tallerId),
         API.listSesionesByTaller(tallerId),
       ]);
 
-      // Carga asistencias por sesión (simple, no óptimo, pero funciona)
-      const asistenciasBySesion = {};
-      for (const s of sesiones) {
-        const sid = String(s.sesionId);
-        const a = await API.getAsistenciaBySesion(sid);
-        asistenciasBySesion[sid] = a || [];
-      }
+      // asistencias por sesión en paralelo con límite para no saturar
+      const asistenciasBySesion = await fetchAsistenciasBySesion_(sesiones);
 
       el.reportesContainer.innerHTML =
         UI.renderReportes?.({ participantes, sesiones, asistenciasBySesion }) ||
@@ -697,6 +808,37 @@
     } finally {
       UI.block?.(false);
     }
+  }
+
+  // ===== util: fetch asistencias con límite =====
+  async function fetchAsistenciasBySesion_(sesiones) {
+    const list = Array.isArray(sesiones) ? sesiones : [];
+    const out = {};
+
+    // nada que hacer
+    if (!list.length || typeof API.getAsistenciaBySesion !== "function") return out;
+
+    const limit = 6; // buen balance: rápido sin explotar el Apps Script
+    let idx = 0;
+
+    async function worker() {
+      while (idx < list.length) {
+        const cur = list[idx++];
+        const sid = String(cur?.sesionId ?? "");
+        if (!sid) continue;
+
+        try {
+          const a = await API.getAsistenciaBySesion(sid);
+          out[sid] = a || [];
+        } catch (_e) {
+          out[sid] = [];
+        }
+      }
+    }
+
+    const workers = Array.from({ length: Math.min(limit, list.length) }, () => worker());
+    await Promise.all(workers);
+    return out;
   }
 
 })();

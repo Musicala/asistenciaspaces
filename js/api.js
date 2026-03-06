@@ -1,50 +1,69 @@
-/* api.js — Asistencia Spaces (v1.2)
+/* api.js — Asistencia Spaces (v1.3)
    Cliente HTTP para Apps Script Web App API
+
    ✅ Evita CORS/preflight usando POST form-urlencoded (NO JSON)
    ✅ Timeout + AbortController
    ✅ Mensajes de error decentes (con detalle cuando sirve)
-   ✅ Reintento suave en fallos de red (1 intento extra)
+   ✅ Reintento suave en fallos de red (1 intento extra por defecto)
    ✅ Normaliza respuestas { ok:true, ... } y lanza Error si ok !== true
+   ✅ Overrides por window.__ASISTENCIA_SPACES_API__ (sin hacks)
+   ✅ NUEVO: updateSesion()
 */
 
 (() => {
   'use strict';
 
   // =============================
-  // CONFIG (EDITA ESTO)
+  // CONFIG BASE (puedes sobre-escribir por window.__ASISTENCIA_SPACES_API__)
   // =============================
-  const WEBAPP_URL =
-    "https://script.google.com/macros/s/AKfycbyFyPp9486wu_hUbMEhOkCn2dP4nYfWaKcGZZ3ZP4K5Z3rTEdbkgkbBItzrzEw_Y1Ja/exec";
+  const BASE = {
+    webappUrl:
+      "https://script.google.com/macros/s/AKfycbySWVHSZe6mGGfzXvEqUWGFaw0noO9Vsux95CX_hdwYD1BNaaULtfGFxa3gvB3dKnU5/exec",
+    token: "MUSICALA-SECRET-2026",
+    timeoutMs: 18000,
+    retries: 1,
+    debug: false,
+  };
 
-  const TOKEN = "MUSICALA-SECRET-2026"; // debe coincidir con Code.gs
+  // =============================
+  // Runtime config (override-friendly)
+  // =============================
+  function cfg_() {
+    const o = (window.__ASISTENCIA_SPACES_API__ && typeof window.__ASISTENCIA_SPACES_API__ === "object")
+      ? window.__ASISTENCIA_SPACES_API__
+      : {};
 
-  // Tiempo máximo por request
-  const TIMEOUT_MS = 18000;
+    return {
+      webappUrl: (typeof o.webappUrl === "string" && o.webappUrl.trim()) ? o.webappUrl.trim() : BASE.webappUrl,
+      token: (typeof o.token === "string" && o.token.trim()) ? o.token.trim() : BASE.token,
+      timeoutMs: Number.isFinite(Number(o.timeoutMs)) ? Math.max(2000, Number(o.timeoutMs)) : BASE.timeoutMs,
+      retries: Number.isFinite(Number(o.retries)) ? Math.max(0, Math.min(3, Number(o.retries))) : BASE.retries,
+      debug: (typeof o.debug === "boolean") ? o.debug : BASE.debug,
+    };
+  }
 
-  // Reintentos (solo red/timeout)
-  const RETRIES = 1;
+  const log_ = (...args) => {
+    const c = cfg_();
+    if (c.debug) console.log("[API]", ...args);
+  };
 
-  // Debug (ponlo true si quieres ver trazas en consola)
-  const DEBUG = false;
+  function assertConfigured_() {
+    const c = cfg_();
+    if (!c.webappUrl || c.webappUrl.includes("PEGAR_WEBAPP_URL_AQUI")) {
+      throw new Error("API no configurada: pega tu WEBAPP_URL en api.js o en window.__ASISTENCIA_SPACES_API__");
+    }
+    if (!c.token) throw new Error("API no configurada: define TOKEN en api.js o en window.__ASISTENCIA_SPACES_API__");
+  }
 
   // =============================
   // Helpers
   // =============================
-  const log = (...args) => { if (DEBUG) console.log("[API]", ...args); };
-
-  function assertConfigured_() {
-    if (!WEBAPP_URL || WEBAPP_URL.includes("PEGAR_WEBAPP_URL_AQUI")) {
-      throw new Error("API no configurada: pega tu WEBAPP_URL en api.js");
-    }
-    if (!TOKEN) throw new Error("API no configurada: define TOKEN en api.js");
-  }
-
   function withTimeoutFetch_(url, opts, ms) {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), ms);
-    const p = fetch(url, { ...opts, signal: ctrl.signal })
+    const promise = fetch(url, { ...opts, signal: ctrl.signal })
       .finally(() => clearTimeout(t));
-    return { ctrl, promise: p };
+    return { ctrl, promise };
   }
 
   function qs_(obj) {
@@ -57,7 +76,6 @@
   }
 
   function form_(obj) {
-    // x-www-form-urlencoded
     const p = new URLSearchParams();
     Object.entries(obj || {}).forEach(([k, v]) => {
       if (v === undefined || v === null) return;
@@ -67,7 +85,6 @@
   }
 
   function isNetworkishError_(err) {
-    // "Failed to fetch" (network/CORS), AbortError (timeout), TypeError en fetch
     if (!err) return false;
     if (err.name === "AbortError") return true;
     const msg = (err.message || String(err)).toLowerCase();
@@ -80,10 +97,9 @@
       (err && err.message) ? err.message :
       String(err);
 
-    // Agrega contexto si existe
     const parts = [base];
-    if (extra && extra.action) parts.push(`(action: ${extra.action})`);
-    if (extra && extra.httpStatus) parts.push(`(HTTP: ${extra.httpStatus})`);
+    if (extra.action) parts.push(`(action: ${extra.action})`);
+    if (extra.httpStatus) parts.push(`(HTTP: ${extra.httpStatus})`);
     return parts.join(" ");
   }
 
@@ -94,8 +110,7 @@
     try {
       json = text ? JSON.parse(text) : {};
     } catch (_) {
-      // Si el backend devolvió HTML/Texto, muéstralo (cortico)
-      const raw = (text || "").slice(0, 500);
+      const raw = (text || "").slice(0, 600);
       return {
         ok: false,
         error: "Respuesta no-JSON del servidor",
@@ -104,65 +119,59 @@
       };
     }
 
-    // Si Apps Script no respeta status codes, igual guardamos
     if (json && typeof json === "object" && typeof json.ok === "boolean") {
       json.httpStatus = res.status;
       return json;
     }
 
-    // Si no tiene formato esperado
     return {
       ok: false,
       error: "Respuesta inválida del servidor (sin campo ok).",
-      raw: (text || "").slice(0, 500),
+      raw: (text || "").slice(0, 600),
       httpStatus: res.status
     };
   }
 
-  async function request_(kind, action, paramsOrBody) {
-    assertConfigured_();
-
-    // GET siempre por querystring
-    if (kind === "GET") {
-      const query = qs_({ action, token: TOKEN, ...(paramsOrBody || {}) });
-      const url = `${WEBAPP_URL}?${query}`;
-      return await fetchJsonWithRetry_(url, { method: "GET" }, { action });
-    }
-
-    // POST: FORM-ENCODED para evitar CORS/preflight
-    // Nota: si necesitas mandar objetos, los serializamos como JSON string
-    const bodyObj = { action, token: TOKEN, ...(paramsOrBody || {}) };
-    Object.entries(bodyObj).forEach(([k, v]) => {
-      if (v && typeof v === "object") bodyObj[k] = JSON.stringify(v);
+  function serializeObjects_(obj) {
+    // Serializa arrays/objetos a JSON string para POST form-urlencoded.
+    // Ojo: Date no lo tocamos, solo lo String().
+    const out = { ...(obj || {}) };
+    Object.entries(out).forEach(([k, v]) => {
+      if (v === undefined || v === null) return;
+      if (typeof v === "object") {
+        // si es Date => string ISO
+        if (v instanceof Date) out[k] = v.toISOString();
+        else out[k] = JSON.stringify(v);
+      } else {
+        out[k] = String(v);
+      }
     });
-
-    return await fetchJsonWithRetry_(
-      WEBAPP_URL,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-        body: form_(bodyObj),
-      },
-      { action }
-    );
+    return out;
   }
 
+  // =============================
+  // Core request
+  // =============================
   async function fetchJsonWithRetry_(url, opts, meta) {
+    const c = cfg_();
     let lastErr = null;
 
-    for (let attempt = 0; attempt <= RETRIES; attempt++) {
+    for (let attempt = 0; attempt <= c.retries; attempt++) {
       try {
-        log("fetch", { url, opts, attempt });
-        const { promise } = withTimeoutFetch_(url, opts, TIMEOUT_MS);
+        log_("fetch", { url, opts, attempt, meta });
+        const { promise } = withTimeoutFetch_(url, opts, c.timeoutMs);
         const res = await promise;
 
         const json = await parseResponse_(res);
 
-        // Si backend dice ok:false
         if (!json || json.ok !== true) {
           const msg = (json && (json.error || json.message)) || "Error desconocido";
           const e = new Error(msg);
-          e._api = { ...(meta || {}), httpStatus: json && json.httpStatus, raw: json && json.raw };
+          e._api = {
+            ...(meta || {}),
+            httpStatus: json && json.httpStatus,
+            raw: json && json.raw
+          };
           throw e;
         }
 
@@ -171,10 +180,9 @@
       } catch (err) {
         lastErr = err;
 
-        // Si es red/timeout y aún hay reintento, reintenta
         const net = isNetworkishError_(err);
-        if (net && attempt < RETRIES) {
-          log("retrying after networkish error", err);
+        if (net && attempt < c.retries) {
+          log_("retrying after networkish error", err);
           await new Promise(r => setTimeout(r, 350));
           continue;
         }
@@ -184,12 +192,41 @@
           action: meta && meta.action,
           httpStatus: err && err._api && err._api.httpStatus
         };
+
+        // Si venía raw (HTML, etc), lo metemos en consola si debug
+        if (c.debug && err && err._api && err._api.raw) {
+          console.warn("[API raw]", err._api.raw);
+        }
+
         throw new Error(friendlyError_(err, extra));
       }
     }
 
-    // No debería llegar acá, pero por si el universo quiere sufrir
     throw new Error(friendlyError_(lastErr, { action: meta && meta.action }));
+  }
+
+  async function request_(kind, action, paramsOrBody) {
+    assertConfigured_();
+    const c = cfg_();
+
+    if (kind === "GET") {
+      const query = qs_({ action, token: c.token, ...(paramsOrBody || {}) });
+      const url = `${c.webappUrl}?${query}`;
+      return await fetchJsonWithRetry_(url, { method: "GET" }, { action });
+    }
+
+    // POST form-urlencoded
+    const bodyObj = serializeObjects_({ action, token: c.token, ...(paramsOrBody || {}) });
+
+    return await fetchJsonWithRetry_(
+      c.webappUrl,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+        body: form_(bodyObj),
+      },
+      { action }
+    );
   }
 
   // =============================
@@ -198,8 +235,7 @@
   const API = {
     // health
     async ping() {
-      const r = await request_("GET", "ping");
-      return r;
+      return await request_("GET", "ping");
     },
 
     // Empresas
@@ -209,9 +245,7 @@
     },
 
     async createEmpresa(data) {
-      // data: { nombre, nit?, contacto?, ... }
-      const r = await request_("POST", "createEmpresa", data);
-      return r; // { ok:true, empresa, note? }
+      return await request_("POST", "createEmpresa", data);
     },
 
     // Talleres
@@ -221,8 +255,7 @@
     },
 
     async createTaller(data) {
-      const r = await request_("POST", "createTaller", data);
-      return r; // { ok:true, taller }
+      return await request_("POST", "createTaller", data);
     },
 
     // Participantes
@@ -232,13 +265,11 @@
     },
 
     async createParticipante(data) {
-      const r = await request_("POST", "createParticipante", data);
-      return r; // { ok:true, participante }
+      return await request_("POST", "createParticipante", data);
     },
 
     async updateParticipante(data) {
-      const r = await request_("POST", "updateParticipante", data);
-      return r; // { ok:true, participante }
+      return await request_("POST", "updateParticipante", data);
     },
 
     // Sesiones
@@ -248,8 +279,13 @@
     },
 
     async createSesion(data) {
-      const r = await request_("POST", "createSesion", data);
-      return r; // { ok:true, sesion, note? }
+      return await request_("POST", "createSesion", data);
+    },
+
+    // ✅ NUEVO: updateSesion (tiempo real)
+    async updateSesion(data) {
+      // data: { sesionId, horaInicioReal?, horaFinReal?, duracionRealMin?, tema?, observaciones?, ... }
+      return await request_("POST", "updateSesion", data);
     },
 
     // Asistencias
@@ -260,70 +296,13 @@
 
     async saveAsistenciaBatch(payload) {
       // payload: { sesionId, tallerId, marcadoPor?, rows:[{participanteId,estado,nota?}] }
-      // Ojo: rows es objeto/array => se enviará serializado JSON automáticamente
-      const r = await request_("POST", "saveAsistenciaBatch", payload);
-      return r; // { ok:true, created, updated }
+      return await request_("POST", "saveAsistenciaBatch", payload);
     },
 
-    // Utilidad: cambia config en runtime si quieres (opcional)
-    _setConfig({ webappUrl, token, debug } = {}) {
-      if (typeof webappUrl === "string" && webappUrl.trim()) {
-        // hack: sí, es const arriba. entonces guardamos override en window.
-        window.__ASISTENCIA_SPACES_WEBAPP_URL__ = webappUrl.trim();
-      }
-      if (typeof token === "string" && token.trim()) {
-        window.__ASISTENCIA_SPACES_TOKEN__ = token.trim();
-      }
-      if (typeof debug === "boolean") {
-        window.__ASISTENCIA_SPACES_DEBUG__ = debug;
-      }
+    // Debug helper (opcional)
+    _getConfig() {
+      return cfg_();
     }
-  };
-
-  // Overrides opcionales (sin tocar el archivo)
-  // window.__ASISTENCIA_SPACES_WEBAPP_URL__ = "https://script.googleusercontent.com/...."
-  // window.__ASISTENCIA_SPACES_TOKEN__ = "...."
-  // window.__ASISTENCIA_SPACES_DEBUG__ = true
-  if (window.__ASISTENCIA_SPACES_WEBAPP_URL__) {
-    // eslint-disable-next-line no-unused-vars
-    const _ = 0; // placeholder para no llorar por "const"
-  }
-  // Truco simple: definimos getters sobre variables "const" usando wrappers
-  // Pero para mantener esto simple, solo re-enrutamos request_ si hay override:
-  const _origRequest = request_;
-  request_ = async function(kind, action, paramsOrBody) { // eslint-disable-line no-func-assign
-    if (window.__ASISTENCIA_SPACES_DEBUG__ === true && DEBUG !== true) {
-      // no cambia DEBUG const, pero igual da contexto en errores al usuario
-    }
-    if (window.__ASISTENCIA_SPACES_WEBAPP_URL__) {
-      // usamos una versión local copiando lógica pero con URL override
-      assertConfigured_();
-      const urlBase = window.__ASISTENCIA_SPACES_WEBAPP_URL__;
-      const tok = window.__ASISTENCIA_SPACES_TOKEN__ || TOKEN;
-
-      if (kind === "GET") {
-        const query = qs_({ action, token: tok, ...(paramsOrBody || {}) });
-        const url = `${urlBase}?${query}`;
-        return await fetchJsonWithRetry_(url, { method: "GET" }, { action });
-      }
-
-      const bodyObj = { action, token: tok, ...(paramsOrBody || {}) };
-      Object.entries(bodyObj).forEach(([k, v]) => {
-        if (v && typeof v === "object") bodyObj[k] = JSON.stringify(v);
-      });
-
-      return await fetchJsonWithRetry_(
-        urlBase,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-          body: form_(bodyObj),
-        },
-        { action }
-      );
-    }
-
-    return await _origRequest(kind, action, paramsOrBody);
   };
 
   // Expose global
