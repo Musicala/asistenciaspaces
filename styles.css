@@ -1,10 +1,13 @@
 /* ==========================================================================
-   Asistencia Spaces | Musicala — styles.css (Light Only)
-   - Sin PWA, sin frameworks
-   - UI clara, premium, usable en desktop y celular
-   - Compatible con tu index.html actual
+   Asistencia Spaces | Musicala — styles.css (Light Only) — v2.3
+   - Sin frameworks, sin modo oscuro (sí, seguimos obedeciendo lo de “luz” 😌)
+   - Compatible con tu index.html + ui.js mejorados
+   - Mejora: jerarquía, spacing, accesibilidad, mobile, tables, cards, chips, dialogs
 ============================================================================ */
 
+/* ==========================================================================
+   Design tokens
+============================================================================ */
 :root{
   /* Brand-ish */
   --bg: #f6f8ff;
@@ -16,20 +19,31 @@
   --beethoven:#680DBF;
   --brahms:#CE0071;
 
+  /* Accents (semantic) */
+  --ok: #22c55e;
+  --warn:#f59e0b;
+  --bad:#ef4444;
+
   /* Surfaces */
   --card: rgba(255,255,255,.78);
   --card2: rgba(255,255,255,.90);
-  --shadow: 0 14px 40px rgba(10, 18, 45, .10);
-  --shadow2: 0 8px 18px rgba(10, 18, 45, .10);
-
-  /* Inputs */
+  --glass: rgba(255,255,255,.68);
   --inputBg: rgba(255,255,255,.92);
 
-  /* Radius / spacing */
+  /* Shadows (soft + premium) */
+  --shadow: 0 14px 40px rgba(10, 18, 45, .10);
+  --shadow2: 0 8px 18px rgba(10, 18, 45, .10);
+  --shadow3: 0 10px 26px rgba(10, 18, 45, .12);
+  --shadowInset: 0 1px 0 rgba(255,255,255,.75) inset;
+
+  /* Radius */
+  --r-2xl: 26px;
   --r-xl: 22px;
   --r-lg: 16px;
   --r-md: 12px;
+  --r-sm: 10px;
 
+  /* Spacing */
   --pad-1: 10px;
   --pad-2: 14px;
   --pad-3: 18px;
@@ -37,6 +51,21 @@
 
   /* Typography */
   --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+
+  /* Motion */
+  --ease: cubic-bezier(.2,.75,.2,1);
+  --t-fast: 120ms var(--ease);
+  --t-mid: 180ms var(--ease);
+
+  /* Focus ring */
+  --ring: 0 0 0 5px rgba(12,65,196,.12);
+  --ring2: 0 0 0 4px rgba(12,65,196,.10);
+
+  /* Layout */
+  --maxw: 1100px;
+
+  /* Header height hint (for sticky inner stuff) */
+  --header-h: 72px;
 }
 
 /* ==========================================================================
@@ -44,6 +73,7 @@
 ============================================================================ */
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
+
 body{
   margin:0;
   font-family: var(--font);
@@ -54,6 +84,8 @@ body{
     radial-gradient(900px 600px at 55% 78%, rgba(206,0,113,.08), transparent 55%),
     var(--bg);
   letter-spacing: .2px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 a{ color: var(--mozart); text-decoration:none; }
@@ -65,6 +97,22 @@ h2{ font-size:16px; margin-bottom:10px; }
 h3{ font-size:15px; }
 
 ::selection{ background: rgba(12,65,196,.16); }
+
+img{ max-width:100%; display:block; }
+
+button, input, select, textarea{ font: inherit; }
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible{
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ transition:none !important; animation:none !important; scroll-behavior:auto !important; }
+}
 
 /* ==========================================================================
    Header
@@ -94,9 +142,16 @@ h3{ font-size:15px; }
   height: 44px;
   object-fit: contain;
   border-radius: 12px;
-  background: rgba(255,255,255,.8);
+  background: rgba(255,255,255,.84);
   box-shadow: var(--shadow2);
   padding: 6px;
+  border: 1px solid rgba(11,16,32,.08);
+  transition: transform var(--t-fast), box-shadow var(--t-fast), filter var(--t-fast);
+}
+.logo:hover{
+  transform: translateY(-1px);
+  box-shadow: var(--shadow3);
+  filter: saturate(1.04);
 }
 
 .header-title{
@@ -130,17 +185,17 @@ h3{ font-size:15px; }
   display:inline-block;
   box-shadow: 0 0 0 4px rgba(12,65,196,.12);
 }
-.status-dot.online{ background: #22c55e; box-shadow: 0 0 0 4px rgba(34,197,94,.14); }
-.status-dot.offline{ background: #f59e0b; box-shadow: 0 0 0 4px rgba(245,158,11,.16); }
-.status-dot.error{ background: #ef4444; box-shadow: 0 0 0 4px rgba(239,68,68,.14); }
+.status-dot.online{ background: var(--ok); box-shadow: 0 0 0 4px rgba(34,197,94,.14); }
+.status-dot.offline{ background: var(--warn); box-shadow: 0 0 0 4px rgba(245,158,11,.16); }
+.status-dot.error{ background: var(--bad); box-shadow: 0 0 0 4px rgba(239,68,68,.14); }
 
 .status-text{ user-select:none; }
 
 /* ==========================================================================
-   Layout
+   Layout / Views
 ============================================================================ */
 .app-main{
-  max-width: 1100px;
+  max-width: var(--maxw);
   margin: 0 auto;
   padding: 18px;
 }
@@ -161,17 +216,27 @@ h3{ font-size:15px; }
   letter-spacing: .2px;
 }
 
+.view-actions{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+}
+
 /* ==========================================================================
    Cards
 ============================================================================ */
 .card{
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: var(--r-xl);
+  border-radius: var(--r-2xl);
   box-shadow: var(--shadow);
   padding: var(--pad-4);
   margin-bottom: 14px;
   backdrop-filter: blur(10px);
+}
+
+.card:has(.table){
+  padding: calc(var(--pad-4) - 2px);
 }
 
 .actions-card{
@@ -180,6 +245,7 @@ h3{ font-size:15px; }
   flex-wrap: wrap;
 }
 
+/* Dashboard info box */
 .taller-info{
   margin-top: 14px;
   padding: 14px;
@@ -195,12 +261,18 @@ h3{ font-size:15px; }
   margin-top: 0;
 }
 
+/* Utility separators */
+.hr{
+  height: 1px;
+  background: rgba(11,16,32,.10);
+  margin: 12px 0;
+  border: none;
+}
+
 /* ==========================================================================
    Forms / Inputs
 ============================================================================ */
-.field-group{
-  margin-top: 12px;
-}
+.field-group{ margin-top: 12px; }
 
 label{
   display:block;
@@ -219,7 +291,8 @@ select,
 input[type="text"],
 input[type="email"],
 input[type="date"],
-input[type="time"]{
+input[type="time"],
+textarea{
   width: 100%;
   padding: 12px 12px;
   border-radius: 14px;
@@ -227,8 +300,11 @@ input[type="time"]{
   background: var(--inputBg);
   color: var(--text);
   outline: none;
-  box-shadow: 0 1px 0 rgba(255,255,255,.7) inset;
+  box-shadow: var(--shadowInset);
+  transition: box-shadow var(--t-fast), border-color var(--t-fast), transform var(--t-fast), background var(--t-fast);
 }
+
+textarea{ resize: vertical; min-height: 90px; }
 
 select{
   appearance: none;
@@ -244,9 +320,14 @@ select{
 }
 
 select:focus,
-input:focus{
+input:focus,
+textarea:focus{
   border-color: rgba(12,65,196,.35);
-  box-shadow: 0 0 0 5px rgba(12,65,196,.12);
+  box-shadow: var(--ring);
+}
+
+input::placeholder, textarea::placeholder{
+  color: rgba(11,16,32,.38);
 }
 
 .search-input{
@@ -265,10 +346,11 @@ button{
   font-weight: 650;
   letter-spacing: .2px;
   user-select:none;
-  transition: transform .06s ease, box-shadow .12s ease, filter .12s ease;
+  transition: transform var(--t-fast), box-shadow var(--t-mid), filter var(--t-fast), background var(--t-fast);
 }
 
 button:active{ transform: translateY(1px); }
+
 button:disabled{
   opacity: .55;
   cursor: not-allowed;
@@ -280,7 +362,8 @@ button:disabled{
   color: #fff;
   box-shadow: 0 10px 20px rgba(12,65,196,.18);
 }
-.btn-primary:hover{ filter: brightness(1.02); }
+.btn-primary:hover{ filter: brightness(1.03) saturate(1.02); }
+.btn-primary:focus-visible{ box-shadow: 0 10px 20px rgba(12,65,196,.18), var(--ring); }
 
 .btn-secondary{
   background: rgba(255,255,255,.9);
@@ -288,23 +371,38 @@ button:disabled{
   border: 1px solid rgba(11,16,32,.14);
   box-shadow: 0 8px 16px rgba(10,18,45,.08);
 }
-.btn-secondary:hover{ filter: brightness(1.01); }
+.btn-secondary:hover{ filter: brightness(1.01); box-shadow: 0 10px 18px rgba(10,18,45,.10); }
+.btn-secondary:focus-visible{ box-shadow: 0 8px 16px rgba(10,18,45,.08), var(--ring); }
 
 .actions-card .btn-primary{
   flex: 1 1 200px;
   min-width: 200px;
 }
 
+/* Small buttons used by ui.js */
+.btn-sm{
+  padding: 10px 12px;
+  border-radius: 14px;
+  font-size: 12px;
+}
+
 /* ==========================================================================
    Tables / Lists containers (rendered by JS)
 ============================================================================ */
+.table-wrap{
+  overflow:auto;
+  border-radius: var(--r-xl);
+  border: 1px solid rgba(11,16,32,.10);
+  box-shadow: 0 10px 22px rgba(10,18,45,.08);
+  background: rgba(255,255,255,.82);
+}
+
+/* Keep table stable inside wrapper */
 .table{
   width:100%;
   border-collapse: collapse;
+  border-radius: var(--r-xl);
   overflow:hidden;
-  border-radius: var(--r-lg);
-  border: 1px solid rgba(11,16,32,.10);
-  background: rgba(255,255,255,.8);
 }
 
 .table th, .table td{
@@ -312,18 +410,41 @@ button:disabled{
   border-bottom: 1px solid rgba(11,16,32,.08);
   font-size: 13px;
   text-align:left;
+  vertical-align: top;
 }
 
 .table th{
   font-size: 12px;
   color: rgba(11,16,32,.70);
-  background: rgba(245,247,255,.9);
+  background: rgba(245,247,255,.92);
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .table tr:hover td{
   background: rgba(12,65,196,.05);
 }
+.table tr:last-child td{ border-bottom:none; }
 
+/* Columns helpers used by ui.js */
+.col-compact{ width: 88px; white-space: nowrap; }
+.col-action{ width: 160px; white-space: nowrap; text-align: right; }
+
+/* Row text helpers (ui.js) */
+.row-title{
+  font-weight: 800;
+  letter-spacing: .1px;
+}
+.row-sub{
+  margin-top: 4px;
+  color: rgba(11,16,32,.68);
+  font-size: 12.5px;
+}
+
+/* ==========================================================================
+   Badges / Pills
+============================================================================ */
 .badge{
   display:inline-flex;
   align-items:center;
@@ -334,11 +455,93 @@ button:disabled{
   font-weight: 650;
   border: 1px solid rgba(11,16,32,.12);
   background: rgba(255,255,255,.78);
+  box-shadow: 0 6px 12px rgba(10,18,45,.06);
 }
 
 .badge.ok{ border-color: rgba(34,197,94,.25); background: rgba(34,197,94,.10); }
 .badge.warn{ border-color: rgba(245,158,11,.28); background: rgba(245,158,11,.10); }
 .badge.bad{ border-color: rgba(239,68,68,.25); background: rgba(239,68,68,.10); }
+
+/* ==========================================================================
+   Dashboard “tinfo” block (ui.js)
+============================================================================ */
+.tinfo{
+  display:flex;
+  justify-content:space-between;
+  gap: 12px;
+  align-items:flex-start;
+}
+.tinfo-left{ min-width: 0; }
+.tinfo-title{ font-weight: 900; }
+.tinfo-sub{
+  color: rgba(11,16,32,.65);
+  margin-top: 2px;
+  font-size: 13px;
+}
+.tinfo-right{
+  display:flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content:flex-end;
+}
+.tinfo-notes{
+  margin-top: 10px;
+  color: rgba(11,16,32,.68);
+}
+
+/* ==========================================================================
+   Sesiones (ui.js session cards)
+============================================================================ */
+.sessions-list{
+  display:grid;
+  gap: 12px;
+}
+
+.session-card{
+  display:flex;
+  align-items:stretch;
+  justify-content:space-between;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--r-xl);
+  border: 1px solid rgba(11,16,32,.10);
+  background: rgba(255,255,255,.86);
+  box-shadow: 0 10px 18px rgba(10,18,45,.06);
+  transition: transform var(--t-fast), box-shadow var(--t-mid), border-color var(--t-fast);
+}
+.session-card:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 14px 26px rgba(10,18,45,.10);
+  border-color: rgba(12,65,196,.18);
+}
+
+.session-meta{
+  display:flex;
+  flex-direction:column;
+  gap: 6px;
+  min-width: 0;
+}
+.session-title{
+  font-weight: 900;
+  font-size: 13px;
+}
+.session-sub{
+  color: var(--muted);
+  font-size: 12px;
+}
+.session-badges{
+  display:flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.session-actions{
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+  align-items:stretch;
+  flex-shrink: 0;
+  justify-content:center;
+}
 
 /* ==========================================================================
    Asistencia view
@@ -347,80 +550,199 @@ button:disabled{
   padding: 18px;
 }
 
+/* Summary bar (sticky inside card) */
 .asistencia-summary{
   display:flex;
   flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 14px;
   padding: 12px;
-  border-radius: var(--r-lg);
+  border-radius: var(--r-xl);
   border: 1px solid rgba(11,16,32,.10);
-  background: rgba(255,255,255,.72);
-  color: rgba(11,16,32,.78);
+  background: rgba(255,255,255,.78);
+  color: rgba(11,16,32,.80);
   font-size: 12px;
   font-weight: 650;
+  box-shadow: 0 10px 22px rgba(10,18,45,.07);
+}
+
+.asistencia-card .asistencia-summary{
+  position: sticky;
+  top: var(--header-h);
+  z-index: 5;
+  backdrop-filter: blur(10px);
 }
 
 .asistencia-summary span{
   padding: 7px 10px;
   border-radius: 999px;
   border: 1px solid rgba(11,16,32,.10);
-  background: rgba(255,255,255,.82);
+  background: rgba(255,255,255,.88);
+  box-shadow: 0 6px 12px rgba(10,18,45,.05);
 }
 
-/* Attendance list item helpers (si ui.js los usa) */
+/* List */
+.asistencia-list{
+  display:grid;
+  gap: 10px;
+}
+
+/* Person row */
 .person-row{
   display:flex;
-  align-items:center;
+  align-items:flex-start;
   justify-content:space-between;
   gap: 10px;
   padding: 12px 12px;
-  border-radius: var(--r-lg);
+  border-radius: var(--r-xl);
   border: 1px solid rgba(11,16,32,.10);
-  background: rgba(255,255,255,.84);
-  margin-bottom: 10px;
+  background: rgba(255,255,255,.86);
+  box-shadow: 0 10px 18px rgba(10,18,45,.06);
+  transition: transform var(--t-fast), box-shadow var(--t-mid), border-color var(--t-fast), background var(--t-fast);
 }
+.person-row:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 14px 26px rgba(10,18,45,.10);
+  border-color: rgba(12,65,196,.18);
+}
+.person-row:focus-within{
+  box-shadow: 0 14px 26px rgba(10,18,45,.10), var(--ring2);
+  border-color: rgba(12,65,196,.28);
+}
+
+/* Attribute-based states (ui.js) */
+.person-row[data-status="ok"]{ border-color: rgba(34,197,94,.22); background: rgba(34,197,94,.06); }
+.person-row[data-status="no"]{ border-color: rgba(239,68,68,.22); background: rgba(239,68,68,.05); }
+.person-row[data-status="tarde"]{ border-color: rgba(245,158,11,.24); background: rgba(245,158,11,.06); }
 
 .person-name{
   display:flex;
   flex-direction:column;
   gap: 2px;
   min-width: 0;
+  flex: 1;
 }
 .person-name strong{
   font-size: 13px;
+  letter-spacing: .15px;
 }
 .person-name small{
   font-size: 12px;
   color: var(--muted);
 }
 
+/* Notes */
+.note-input{
+  margin-top: 8px;
+  width: 100%;
+}
+
+/* Actions (chips) */
 .person-actions{
   display:flex;
   gap: 8px;
   align-items:center;
+  flex-shrink: 0;
 }
 
+/* Chips */
 .chip{
   border-radius: 999px;
   padding: 9px 12px;
   border: 1px solid rgba(11,16,32,.12);
-  background: rgba(255,255,255,.9);
-  font-weight: 750;
+  background: rgba(255,255,255,.92);
+  font-weight: 780;
   font-size: 12px;
   min-width: 44px;
   text-align:center;
-  box-shadow: 0 6px 12px rgba(10,18,45,.06);
+  box-shadow: 0 8px 16px rgba(10,18,45,.08);
+  transition: transform var(--t-fast), box-shadow var(--t-mid), filter var(--t-fast), border-color var(--t-fast), background var(--t-fast);
 }
-.chip:hover{ filter: brightness(1.01); }
+.chip:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 12px 20px rgba(10,18,45,.12);
+  filter: saturate(1.03);
+}
+.chip:active{ transform: translateY(0px); }
+.chip:focus-visible{ box-shadow: 0 12px 20px rgba(10,18,45,.12), var(--ring); }
 
-.chip.ok{ border-color: rgba(34,197,94,.25); background: rgba(34,197,94,.12); }
-.chip.no{ border-color: rgba(239,68,68,.25); background: rgba(239,68,68,.10); }
-.chip.tarde{ border-color: rgba(245,158,11,.28); background: rgba(245,158,11,.12); }
+.chip.ok{ border-color: rgba(34,197,94,.25); background: rgba(34,197,94,.14); }
+.chip.no{ border-color: rgba(239,68,68,.25); background: rgba(239,68,68,.12); }
+.chip.tarde{ border-color: rgba(245,158,11,.28); background: rgba(245,158,11,.14); }
 
-.note-input{
-  margin-top: 8px;
-  width: 100%;
+/* aria-pressed (ui.js) */
+.chip[aria-pressed="true"]{
+  border-color: rgba(12,65,196,.30);
+  background: rgba(12,65,196,.10);
+}
+
+/* ==========================================================================
+   Sesión meta inline card (ui.js)
+============================================================================ */
+.sesion-meta-inline{ margin-bottom: 12px; }
+.sesion-meta-card{
+  padding: 14px;
+  border-radius: var(--r-xl);
+}
+.sesion-meta-top{
+  display:flex;
+  flex-wrap:wrap;
+  gap: 8px;
+  align-items:center;
+}
+.sesion-meta-badges{
+  display:flex;
+  flex-wrap:wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* ==========================================================================
+   Participantes mobile cards (ui.js)
+============================================================================ */
+.p-cards{
+  display:grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.p-card{
+  padding: 12px;
+  border-radius: var(--r-xl);
+  border: 1px solid rgba(11,16,32,.10);
+  background: rgba(255,255,255,.86);
+  box-shadow: 0 10px 18px rgba(10,18,45,.06);
+  display:flex;
+  justify-content:space-between;
+  gap: 10px;
+}
+.p-card-main{ min-width: 0; }
+.p-card-title{ font-weight: 900; }
+.p-card-sub{
+  margin-top: 6px;
+  color: rgba(11,16,32,.68);
+  font-size: 12.5px;
+  display:grid;
+  gap: 2px;
+}
+.p-card-actions{
+  display:flex;
+  flex-direction:column;
+  gap: 8px;
+  justify-content:center;
+  align-items:flex-end;
+}
+.p-card-acud{
+  margin-top: 6px;
+  color: rgba(11,16,32,.62);
+  font-size: 12px;
+}
+
+/* Desktop shows table, mobile shows cards */
+@media (min-width: 860px){
+  .p-cards{ display:none; }
+}
+@media (max-width: 859px){
+  .table-wrap{ display:none; }
 }
 
 /* ==========================================================================
@@ -433,6 +755,7 @@ dialog{
   width: min(560px, calc(100vw - 28px));
   box-shadow: 0 30px 80px rgba(10,18,45,.20);
   background: rgba(255,255,255,.96);
+  overflow: hidden;
 }
 
 dialog::backdrop{
@@ -447,9 +770,7 @@ dialog::backdrop{
   gap: 10px;
 }
 
-.modal-content h3{
-  margin-bottom: 6px;
-}
+.modal-content h3{ margin-bottom: 6px; }
 
 .modal-actions{
   display:flex;
@@ -458,9 +779,7 @@ dialog::backdrop{
   margin-top: 10px;
 }
 
-.modal-content input{
-  width: 100%;
-}
+.modal-content input{ width: 100%; }
 
 /* ==========================================================================
    Toasts
@@ -490,58 +809,88 @@ dialog::backdrop{
   display:flex;
   align-items:flex-start;
   gap: 10px;
+  backdrop-filter: blur(10px);
+  transform: translateY(0);
+  transition: transform var(--t-mid), box-shadow var(--t-mid);
+}
+.toast:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 22px 46px rgba(10,18,45,.16);
 }
 
 .toast .dot{
-  width: 10px; height: 10px; border-radius: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
   margin-top: 4px;
   background: var(--mozart);
   box-shadow: 0 0 0 4px rgba(12,65,196,.12);
 }
-.toast.ok .dot{ background:#22c55e; box-shadow: 0 0 0 4px rgba(34,197,94,.14); }
-.toast.warn .dot{ background:#f59e0b; box-shadow: 0 0 0 4px rgba(245,158,11,.16); }
-.toast.bad .dot{ background:#ef4444; box-shadow: 0 0 0 4px rgba(239,68,68,.14); }
+.toast.ok .dot{ background: var(--ok); box-shadow: 0 0 0 4px rgba(34,197,94,.14); }
+.toast.warn .dot{ background: var(--warn); box-shadow: 0 0 0 4px rgba(245,158,11,.16); }
+.toast.bad .dot{ background: var(--bad); box-shadow: 0 0 0 4px rgba(239,68,68,.14); }
 
-.toast .msg{
-  flex: 1;
-}
+.toast .msg{ flex: 1; }
 
 /* ==========================================================================
-   Empty states (si ui.js los usa)
+   Empty states
 ============================================================================ */
 .empty{
   padding: 18px;
-  border-radius: var(--r-lg);
+  border-radius: var(--r-xl);
   border: 1px dashed rgba(11,16,32,.18);
   background: rgba(255,255,255,.65);
   color: var(--muted);
 }
 
-.hr{
-  height: 1px;
-  background: rgba(11,16,32,.10);
-  margin: 12px 0;
-  border: none;
+/* ==========================================================================
+   Overlay (ui.js creates .ui-overlay)
+============================================================================ */
+.ui-overlay{
+  position: fixed;
+  inset: 0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  background: rgba(255,255,255,.55);
+  backdrop-filter: blur(2px);
+  z-index: 999;
+}
+.ui-overlay-box{
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(11,16,32,.14);
+  background: rgba(255,255,255,.92);
+  box-shadow: 0 18px 40px rgba(10,18,45,.14);
+  font-weight: 800;
+  color: rgba(11,16,32,.78);
 }
 
 /* ==========================================================================
-   Responsive
+   Responsive (mobile)
 ============================================================================ */
 @media (max-width: 720px){
+  :root{ --header-h: 66px; }
+
   .app-main{ padding: 14px; }
-  .card{ padding: 16px; }
+
+  .app-header{ padding: 12px 14px; }
+
+  .card{ padding: 16px; border-radius: var(--r-xl); }
   .actions-card{ gap: 8px; }
+
   .actions-card .btn-primary{
     min-width: 0;
     flex: 1 1 48%;
   }
-  #currentContext{
-    max-width: 48vw;
-  }
+
+  #currentContext{ max-width: 48vw; }
+
   .inline{
     flex-direction: column;
     align-items: stretch;
   }
+
   .view-header{
     flex-direction: column;
     align-items: stretch;
@@ -550,6 +899,9 @@ dialog::backdrop{
     display:flex;
     gap: 10px;
   }
+
+  .asistencia-card{ padding: 14px; }
+
   .person-row{
     flex-direction: column;
     align-items: stretch;
@@ -558,4 +910,30 @@ dialog::backdrop{
     justify-content: flex-start;
     flex-wrap: wrap;
   }
+
+  /* Tables: keep usable if still visible anywhere */
+  .table{
+    display:block;
+    overflow:auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .table th, .table td{ white-space: nowrap; }
+}
+
+/* ==========================================================================
+   Small screens (super compact)
+============================================================================ */
+@media (max-width: 420px){
+  .logo{ width: 40px; height: 40px; }
+  .toast-host{ right: 12px; bottom: 12px; }
+  button{ padding: 11px 13px; border-radius: 15px; }
+}
+
+/* ==========================================================================
+   Print (porque a veces la gente imprime apps web… y luego pregunta por qué 😅)
+============================================================================ */
+@media print{
+  .app-header, .toast-host, dialog, .ui-overlay{ display:none !important; }
+  body{ background: #fff; }
+  .card{ box-shadow:none; border:1px solid #ddd; }
 }

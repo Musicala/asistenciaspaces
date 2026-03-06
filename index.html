@@ -2,91 +2,120 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
   <title>Asistencia Spaces | Musicala</title>
+  <meta name="description" content="Asistencia Spaces | Musicala — Gestión simple y clara de participantes, sesiones y asistencia." />
+  <meta name="theme-color" content="#f6f8ff" />
+  <meta name="color-scheme" content="light" />
+
+  <!-- Social preview -->
+  <meta property="og:title" content="Asistencia Spaces | Musicala" />
+  <meta property="og:description" content="Gestión de asistencia para talleres y espacios." />
+  <meta property="og:type" content="website" />
+
+  <!-- Favicon / icons -->
+  <link rel="icon" href="./assets/logo.png" />
+  <link rel="apple-touch-icon" href="./assets/logo.png" />
+
+  <!-- Preload logo (mejor primer paint) -->
+  <link rel="preload" as="image" href="./assets/logo.png" />
 
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
 
+  <!-- ============== SKIP LINK (accesibilidad) ============== -->
+  <a class="skip-link" href="#main">Saltar al contenido</a>
+
   <!-- ================= HEADER ================= -->
-  <header class="app-header">
+  <header class="app-header" role="banner">
     <div class="header-left">
-      <img src="./assets/logo.png" alt="Musicala" class="logo" />
+      <img src="./assets/logo.png" alt="Musicala" class="logo" loading="eager" decoding="async" />
       <div class="header-title">
         <h1>Asistencia Spaces</h1>
         <span id="currentContext">Sin taller seleccionado</span>
       </div>
     </div>
 
-    <div class="header-right">
-      <span id="connectionStatus" class="status-dot online"></span>
-      <span class="status-text">Conectado</span>
+    <div class="header-right" aria-live="polite" aria-atomic="true">
+      <span id="connectionStatus" class="status-dot online" aria-hidden="true"></span>
+      <span class="status-text" id="connectionText">Conectado</span>
     </div>
   </header>
 
   <!-- ================= MAIN ================= -->
-  <main class="app-main">
+  <main id="main" class="app-main" role="main" tabindex="-1">
 
     <!-- ============ DASHBOARD ============ -->
-    <section id="view-dashboard" class="view active">
+    <section id="view-dashboard" class="view active" aria-labelledby="dashTitle">
 
       <div class="card">
-        <h2>Seleccionar contexto</h2>
+        <div class="view-header" style="margin:0 0 10px;">
+          <h2 id="dashTitle">Seleccionar contexto</h2>
+        </div>
 
         <div class="field-group">
-          <label>Empresa</label>
+          <label for="empresaSelect">Empresa</label>
           <div class="inline">
-            <select id="empresaSelect"></select>
-            <button id="btnNuevaEmpresa" class="btn-secondary">+ Nueva</button>
+            <select id="empresaSelect" aria-label="Seleccionar empresa"></select>
+            <button id="btnNuevaEmpresa" class="btn-secondary" type="button" title="Crear empresa">+ Nueva</button>
           </div>
         </div>
 
         <div class="field-group">
-          <label>Taller</label>
+          <label for="tallerSelect">Taller</label>
           <div class="inline">
-            <select id="tallerSelect"></select>
-            <button id="btnNuevoTaller" class="btn-secondary">+ Nuevo</button>
+            <select id="tallerSelect" aria-label="Seleccionar taller"></select>
+            <button id="btnNuevoTaller" class="btn-secondary" type="button" title="Crear taller">+ Nuevo</button>
           </div>
         </div>
 
-        <div id="tallerInfo" class="taller-info"></div>
+        <div id="tallerInfo" class="taller-info" aria-live="polite"></div>
       </div>
 
-      <div class="card actions-card">
-        <button id="btnIrParticipantes" class="btn-primary">Participantes</button>
-        <button id="btnIrSesiones" class="btn-primary">Sesiones</button>
-        <button id="btnIrReportes" class="btn-primary">Reportes</button>
+      <div class="card actions-card" aria-label="Acciones principales">
+        <button id="btnIrParticipantes" class="btn-primary" type="button">Participantes</button>
+        <button id="btnIrSesiones" class="btn-primary" type="button">Sesiones</button>
+        <button id="btnIrReportes" class="btn-primary" type="button">Reportes</button>
       </div>
 
     </section>
 
     <!-- ============ PARTICIPANTES ============ -->
-    <section id="view-participantes" class="view">
+    <section id="view-participantes" class="view" aria-labelledby="participantesTitle">
 
       <div class="view-header">
-        <h2>Participantes</h2>
-        <div>
-          <button id="btnVolverDashboard1" class="btn-secondary">Volver</button>
-          <button id="btnAgregarParticipante" class="btn-primary">+ Agregar</button>
+        <h2 id="participantesTitle">Participantes</h2>
+        <div class="view-actions">
+          <button id="btnVolverDashboard1" class="btn-secondary" type="button">Volver</button>
+          <button id="btnAgregarParticipante" class="btn-primary" type="button">+ Agregar</button>
         </div>
       </div>
 
       <div class="card">
-        <input type="text" id="buscarParticipante" placeholder="Buscar participante..." class="search-input" />
+        <label class="sr-only" for="buscarParticipante">Buscar participante</label>
+        <input
+          type="text"
+          id="buscarParticipante"
+          placeholder="Buscar participante..."
+          class="search-input"
+          autocomplete="off"
+          inputmode="search"
+        />
         <div id="participantesTableContainer"></div>
       </div>
 
     </section>
 
     <!-- ============ SESIONES ============ -->
-    <section id="view-sesiones" class="view">
+    <section id="view-sesiones" class="view" aria-labelledby="sesionesTitle">
 
       <div class="view-header">
-        <h2>Sesiones</h2>
-        <div>
-          <button id="btnVolverDashboard2" class="btn-secondary">Volver</button>
-          <button id="btnNuevaSesion" class="btn-primary">+ Nueva sesión</button>
+        <h2 id="sesionesTitle">Sesiones</h2>
+        <div class="view-actions">
+          <button id="btnVolverDashboard2" class="btn-secondary" type="button">Volver</button>
+          <button id="btnNuevaSesion" class="btn-primary" type="button">+ Nueva sesión</button>
         </div>
       </div>
 
@@ -97,19 +126,22 @@
     </section>
 
     <!-- ============ ASISTENCIA ============ -->
-    <section id="view-asistencia" class="view">
+    <section id="view-asistencia" class="view" aria-labelledby="asistenciaTitle">
 
       <div class="view-header">
-        <h2>Marcar asistencia</h2>
-        <div>
-          <button id="btnVolverSesiones" class="btn-secondary">Volver</button>
-          <button id="btnGuardarAsistencia" class="btn-primary">Guardar</button>
+        <h2 id="asistenciaTitle">Marcar asistencia</h2>
+        <div class="view-actions">
+          <button id="btnVolverSesiones" class="btn-secondary" type="button">Volver</button>
+          <button id="btnGuardarAsistencia" class="btn-primary" type="button">Guardar</button>
         </div>
       </div>
 
+      <!-- Optional: mount para sesión meta (si app.js lo usa) -->
+      <div id="sesionMetaBox"></div>
+
       <div class="card asistencia-card">
 
-        <div class="asistencia-summary">
+        <div class="asistencia-summary" aria-label="Resumen asistencia">
           <span id="countAsistio">0 Asistieron</span>
           <span id="countNo">0 No asistieron</span>
           <span id="countTarde">0 Tarde</span>
@@ -123,12 +155,12 @@
     </section>
 
     <!-- ============ REPORTES ============ -->
-    <section id="view-reportes" class="view">
+    <section id="view-reportes" class="view" aria-labelledby="reportesTitle">
 
       <div class="view-header">
-        <h2>Reportes</h2>
-        <div>
-          <button id="btnVolverDashboard3" class="btn-secondary">Volver</button>
+        <h2 id="reportesTitle">Reportes</h2>
+        <div class="view-actions">
+          <button id="btnVolverDashboard3" class="btn-secondary" type="button">Volver</button>
         </div>
       </div>
 
@@ -143,58 +175,105 @@
   <!-- ================= MODALES ================= -->
 
   <!-- Modal Empresa -->
-  <dialog id="modalEmpresa">
-    <form method="dialog" class="modal-content">
-      <h3>Nueva Empresa</h3>
+  <dialog id="modalEmpresa" aria-labelledby="modalEmpresaTitle">
+    <form method="dialog" class="modal-content" autocomplete="on">
+      <h3 id="modalEmpresaTitle">Nueva Empresa</h3>
 
-      <input type="text" id="inputEmpresaNombre" placeholder="Nombre de la empresa" required />
-      <input type="text" id="inputEmpresaContacto" placeholder="Contacto (opcional)" />
-      <input type="text" id="inputEmpresaTelefono" placeholder="Teléfono (opcional)" />
-      <input type="email" id="inputEmpresaEmail" placeholder="Email (opcional)" />
+      <label class="sr-only" for="inputEmpresaNombre">Nombre empresa</label>
+      <input type="text" id="inputEmpresaNombre" placeholder="Nombre de la empresa" required autocomplete="organization" />
+
+      <label class="sr-only" for="inputEmpresaContacto">Contacto</label>
+      <input type="text" id="inputEmpresaContacto" placeholder="Contacto (opcional)" autocomplete="name" />
+
+      <label class="sr-only" for="inputEmpresaTelefono">Teléfono</label>
+      <input type="tel" id="inputEmpresaTelefono" placeholder="Teléfono (opcional)" inputmode="tel" autocomplete="tel" />
+
+      <label class="sr-only" for="inputEmpresaEmail">Email</label>
+      <input type="email" id="inputEmpresaEmail" placeholder="Email (opcional)" autocomplete="email" />
 
       <div class="modal-actions">
         <button value="cancel" class="btn-secondary">Cancelar</button>
-        <button id="confirmCrearEmpresa" class="btn-primary">Crear</button>
+        <button id="confirmCrearEmpresa" class="btn-primary" value="default">Crear</button>
       </div>
     </form>
   </dialog>
 
   <!-- Modal Taller -->
-  <dialog id="modalTaller">
-    <form method="dialog" class="modal-content">
-      <h3>Nuevo Taller</h3>
+  <dialog id="modalTaller" aria-labelledby="modalTallerTitle">
+    <form method="dialog" class="modal-content" autocomplete="on">
+      <h3 id="modalTallerTitle">Nuevo Taller</h3>
 
-      <input type="text" id="inputTallerNombre" placeholder="Nombre del taller" required />
-      <input type="date" id="inputFechaInicio" />
-      <input type="date" id="inputFechaFin" />
-      <input type="text" id="inputFacilitador" placeholder="Facilitador" />
+      <label class="sr-only" for="inputTallerNombre">Nombre taller</label>
+      <input type="text" id="inputTallerNombre" placeholder="Nombre del taller" required autocomplete="off" />
+
+      <div class="inline">
+        <div class="field-group" style="margin:0; flex:1;">
+          <label for="inputFechaInicio">Fecha inicio</label>
+          <input type="date" id="inputFechaInicio" />
+        </div>
+        <div class="field-group" style="margin:0; flex:1;">
+          <label for="inputFechaFin">Fecha fin</label>
+          <input type="date" id="inputFechaFin" />
+        </div>
+      </div>
+
+      <label class="sr-only" for="inputFacilitador">Facilitador</label>
+      <input type="text" id="inputFacilitador" placeholder="Facilitador" autocomplete="name" />
 
       <div class="modal-actions">
         <button value="cancel" class="btn-secondary">Cancelar</button>
-        <button id="confirmCrearTaller" class="btn-primary">Crear</button>
+        <button id="confirmCrearTaller" class="btn-primary" value="default">Crear</button>
       </div>
     </form>
   </dialog>
 
   <!-- Modal Participante -->
-  <dialog id="modalParticipante">
-    <form method="dialog" class="modal-content">
-      <h3>Nuevo Participante</h3>
+  <dialog id="modalParticipante" aria-labelledby="modalParticipanteTitle">
+    <form method="dialog" class="modal-content" autocomplete="on" novalidate>
+      <h3 id="modalParticipanteTitle">Nuevo Participante</h3>
 
-      <input type="text" id="inputParticipanteNombre" placeholder="Nombre completo" required />
-      <input type="text" id="inputParticipanteDocumento" placeholder="Documento (opcional)" />
-      <input type="text" id="inputParticipanteTelefono" placeholder="Teléfono (opcional)" />
-      <input type="email" id="inputParticipanteEmail" placeholder="Email (opcional)" />
+      <!-- Datos participante -->
+      <label class="sr-only" for="inputParticipanteNombre">Nombre completo</label>
+      <input type="text" id="inputParticipanteNombre" placeholder="Nombre completo" required autocomplete="name" />
+
+      <label class="sr-only" for="inputParticipanteDocumento">Documento</label>
+      <input type="text" id="inputParticipanteDocumento" placeholder="Documento (opcional)" autocomplete="off" />
+
+      <label class="sr-only" for="inputParticipanteTelefono">Teléfono</label>
+      <input type="tel" id="inputParticipanteTelefono" placeholder="Teléfono (opcional)" inputmode="tel" autocomplete="tel" />
+
+      <label class="sr-only" for="inputParticipanteEmail">Email</label>
+      <input type="email" id="inputParticipanteEmail" placeholder="Email (opcional)" autocomplete="email" />
+
+      <!-- Acudiente (si aplica) -->
+      <div class="subsection" role="group" aria-labelledby="acudienteTitle">
+        <div class="subsection-title" id="acudienteTitle">Acudiente (si aplica)</div>
+
+        <label class="sr-only" for="inputAcudienteNombre">Nombre del acudiente</label>
+        <input type="text" id="inputAcudienteNombre" placeholder="Nombre del acudiente (opcional)" autocomplete="name" />
+
+        <label class="sr-only" for="inputAcudienteDocumento">Documento del acudiente</label>
+        <input type="text" id="inputAcudienteDocumento" placeholder="Documento del acudiente (opcional)" autocomplete="off" />
+
+        <label class="sr-only" for="inputAcudienteRelacion">Relación</label>
+        <input type="text" id="inputAcudienteRelacion" placeholder="Relación (mamá, papá, tutor...) (opcional)" autocomplete="off" />
+
+        <label class="sr-only" for="inputAcudienteTelefono">Teléfono del acudiente</label>
+        <input type="tel" id="inputAcudienteTelefono" placeholder="Teléfono del acudiente (opcional)" inputmode="tel" autocomplete="tel" />
+
+        <label class="sr-only" for="inputAcudienteEmail">Email del acudiente</label>
+        <input type="email" id="inputAcudienteEmail" placeholder="Email del acudiente (opcional)" autocomplete="email" />
+      </div>
 
       <div class="modal-actions">
         <button value="cancel" class="btn-secondary">Cancelar</button>
-        <button id="confirmCrearParticipante" class="btn-primary">Crear</button>
+        <button id="confirmCrearParticipante" class="btn-primary" value="default">Crear</button>
       </div>
     </form>
   </dialog>
 
   <!-- Toast container -->
-  <div id="toastHost" class="toast-host"></div>
+  <div id="toastHost" class="toast-host" aria-live="polite" aria-atomic="true"></div>
 
   <!-- ================= SCRIPTS ================= -->
   <script src="./js/utils.js"></script>
@@ -203,6 +282,59 @@
   <script src="./js/ui.js"></script>
   <script src="./js/dialog.js"></script>
   <script src="./js/app.js"></script>
+
+  <!-- Tiny helper classes -->
+  <style>
+    /* screen-reader only */
+    .sr-only{
+      position:absolute !important;
+      width:1px;height:1px;
+      padding:0;margin:-1px;
+      overflow:hidden;
+      clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;
+    }
+
+    /* skip link */
+    .skip-link{
+      position:absolute;
+      left:-999px;
+      top:10px;
+      z-index:9999;
+      padding:10px 12px;
+      border-radius:12px;
+      background:#fff;
+      box-shadow:0 10px 30px rgba(11,16,32,.12);
+      border:1px solid rgba(11,16,32,.12);
+      color:#0b1020;
+      text-decoration:none;
+    }
+    .skip-link:focus{ left:10px; }
+
+    /* view actions */
+    .view-actions{ display:flex; gap:10px; align-items:center; }
+
+    /* subsection in modal */
+    .subsection{
+      margin-top:14px;
+      padding-top:12px;
+      border-top:1px solid rgba(11,16,32,.10);
+      display:grid;
+      gap:10px;
+    }
+    .subsection-title{
+      font-weight:700;
+      font-size:13px;
+      letter-spacing:.2px;
+      color:rgba(11,16,32,.70);
+      margin-bottom:2px;
+    }
+
+    /* better dialog sizing fallback if styles.css doesn't include it */
+    dialog{
+      max-width:min(560px, calc(100vw - 28px));
+    }
+  </style>
 
 </body>
 </html>
