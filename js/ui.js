@@ -567,6 +567,8 @@
 
   function bindAsistenciaActions({ root, onMark, onNote }) {
     if (!root) return;
+    if (root.dataset.asistenciaBound === "1") return;
+    root.dataset.asistenciaBound = "1";
 
     // clicks: mark
     root.addEventListener("click", (ev) => {

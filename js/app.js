@@ -62,6 +62,7 @@
     btnTiempoRealSesion: $("#btnTiempoRealSesion"),
 
     asistenciaListContainer: $("#asistenciaListContainer"),
+    buscarAsistenciaParticipante: $("#buscarAsistenciaParticipante"),
     countAsistio: $("#countAsistio"),
     countNo: $("#countNo"),
     countTarde: $("#countTarde"),
@@ -160,11 +161,16 @@
       activeSesionId = null;
       activeSesionObj = null;
       asistenciaDraft = null;
+      if (el.buscarAsistenciaParticipante) el.buscarAsistenciaParticipante.value = "";
       go_("sesiones");
       await loadSesiones_();
     });
 
     el.btnGuardarAsistencia?.addEventListener("click", onGuardarAsistencia_);
+    const debouncedAsistenciaSearch = Utils.debounce
+      ? Utils.debounce(() => renderAsistencia_(), 140)
+      : () => renderAsistencia_();
+    el.buscarAsistenciaParticipante?.addEventListener("input", debouncedAsistenciaSearch);
 
     // Tiempo real de sesión (si existe)
     el.btnTiempoRealSesion?.addEventListener("click", onTiempoRealSesion_);
@@ -532,6 +538,7 @@
     if (!tallerId || !sesionId) return;
 
     activeSesionId = String(sesionId);
+    if (el.buscarAsistenciaParticipante) el.buscarAsistenciaParticipante.value = "";
     go_("asistencia");
 
     UI.block?.(true);
@@ -610,12 +617,18 @@
     const participantes = Store.getParticipantes?.() || [];
     const activos = UI.onlyActivos?.(participantes)
       || participantes.filter(p => String(p?.activo || "SI").toUpperCase() !== "NO");
+    const q = (el.buscarAsistenciaParticipante?.value || "").trim();
+    const filtered = UI.filterParticipantes?.(activos, q) || activos;
 
     // meta: si UI soporta sesionObj, se la pasamos
     el.asistenciaListContainer.innerHTML =
-      UI.renderAsistenciaList?.(activos, asistenciaDraft?.map || {}, activeSesionObj) ||
-      UI.fallbackAsistenciaList?.(activos, asistenciaDraft?.map || {}) ||
-      "";
+      (q && filtered.length === 0)
+        ? (UI.renderEmpty?.(`No se encontraron participantes con "${q}".`) || "")
+        : (
+            UI.renderAsistenciaList?.(filtered, asistenciaDraft?.map || {}, activeSesionObj) ||
+            UI.fallbackAsistenciaList?.(filtered, asistenciaDraft?.map || {}, activeSesionObj) ||
+            ""
+          );
 
     UI.bindAsistenciaActions?.({
       root: el.asistenciaListContainer,
