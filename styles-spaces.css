@@ -97,6 +97,8 @@ body:not([data-role="admin"]) [data-nav="auditoria"]{ display:none !important; }
 .dialog-msg{ color:var(--bad); font-size:13px; padding:6px 0; }
 
 .dup-warning{ border:1px solid rgba(245,158,11,.4); background:rgba(245,158,11,.08); border-radius:12px; padding:10px; font-size:13px; }
+.btn-secondary.danger{ color:var(--bad,#dc2626); border-color:rgba(220,38,38,.35); }
+.btn-secondary.danger:hover{ background:rgba(220,38,38,.08); border-color:rgba(220,38,38,.55); }
 .back-link{ background:none; border:none; color:var(--mozart); cursor:pointer; font-weight:700; padding:0; margin-bottom:6px; }
 
 /* ---------- Chips de asistencia ---------- */

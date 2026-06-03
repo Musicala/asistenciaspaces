@@ -256,7 +256,7 @@ async function viewClientes() {
           <input id="buscarCliente" class="search-input" placeholder="Buscar cliente…" />
         </div>
         <div>
-          <button class="btn-secondary btn-sm" data-act="export-clientes">Exportar CSV</button>
+          ${isAdmin() ? `<button class="btn-secondary btn-sm" data-act="export-clientes">Exportar CSV</button>` : ""}
           <button class="btn-primary" data-act="nuevo-cliente">+ Nuevo cliente</button>
         </div>
       </div>
@@ -292,6 +292,7 @@ function clienteRowHTML(c) {
     </div>
     <div class="actions">
       <button class="btn-secondary btn-sm" data-act="edit-cliente" data-id="${esc(c.id)}">Editar</button>
+      <button class="btn-secondary btn-sm danger" data-act="del-cliente" data-id="${esc(c.id)}">Eliminar</button>
     </div>
   </div>`;
 }
@@ -317,7 +318,8 @@ async function nuevoCliente() {
 
 async function editarCliente(id) {
   const c = await Clientes.getCliente(id);
-  const data = await openForm({ title: "Editar cliente", fields: clienteFields(c), values: c });
+  const data = await openForm({ title: "Editar cliente", fields: clienteFields(c), values: c,
+    extraHTML: `<div class="dup-warning" style="margin-top:4px">💡 Los <b>paquetes/planes de horas</b> y los <b>participantes</b> se asignan abriendo la ficha del cliente (toca su tarjeta en la lista), no aquí.</div>` });
   if (!data) return;
   await withBusy(() => Clientes.updateCliente(id, data));
   toast("Cliente actualizado ✅"); render();
@@ -388,11 +390,11 @@ async function viewCliente(id) {
 
     <div class="card">
       <div class="toolbar">
-        <div class="section-title" style="margin:0">Asistentes</div>
-        <button class="btn-primary btn-sm" data-act="nuevo-asistente" data-id="${esc(id)}">+ Asistente</button>
+        <div class="section-title" style="margin:0">Participantes</div>
+        <button class="btn-primary btn-sm" data-act="nuevo-asistente" data-id="${esc(id)}">+ Participante</button>
       </div>
       <div class="list-grid">
-        ${asistentes.length ? asistentes.map(asistenteRowHTML).join("") : `<div class="empty">Sin asistentes.</div>`}
+        ${asistentes.length ? asistentes.map(asistenteRowHTML).join("") : `<div class="empty">Sin participantes. Son las personas que asisten a las sesiones de este cliente.</div>`}
       </div>
     </div>`;
   window.__paquetesCache = paquetes;
@@ -482,11 +484,11 @@ const asistenteFields = (v = {}) => ([
 ]);
 
 async function nuevoAsistente(clienteId) {
-  const data = await openForm({ title: "Nuevo asistente", fields: asistenteFields() });
+  const data = await openForm({ title: "Nuevo participante", fields: asistenteFields() });
   if (!data) return;
   try {
     await Asistentes.createAsistente({ clienteId, ...data });
-    toast("Asistente creado ✅"); render();
+    toast("Participante creado ✅"); render();
   } catch (e) {
     if (e.duplicados?.length) {
       const nombres = e.duplicados.map((d) => d.nombreCompleto).join(", ");
@@ -496,17 +498,17 @@ async function nuevoAsistente(clienteId) {
         fields: [],
         extraHTML: `<div class="dup-warning">Ya existe(n): <b>${esc(nombres)}</b>.<br>¿Crear de todas formas?</div>`,
       });
-      if (conf) { await withBusy(() => Asistentes.createAsistente({ clienteId, ...data }, { forzar: true })); toast("Asistente creado ✅"); render(); }
+      if (conf) { await withBusy(() => Asistentes.createAsistente({ clienteId, ...data }, { forzar: true })); toast("Participante creado ✅"); render(); }
     } else { toast(e.message, "bad"); }
   }
 }
 
 async function editarAsistente(id, clienteId) {
   const a = await Asistentes.getAsistente(id);
-  const data = await openForm({ title: "Editar asistente", fields: asistenteFields(a), values: a });
+  const data = await openForm({ title: "Editar participante", fields: asistenteFields(a), values: a });
   if (!data) return;
   await withBusy(() => Asistentes.updateAsistente(id, data));
-  toast("Asistente actualizado ✅"); render();
+  toast("Participante actualizado ✅"); render();
 }
 
 /* ───────────────────────── RESERVAS ───────────────────────── */
@@ -522,7 +524,7 @@ async function viewReservas() {
       <div class="toolbar">
         <div class="section-title" style="margin:0">Todas las reservas</div>
         <div>
-          <button class="btn-secondary btn-sm" data-act="export-reservas">Exportar CSV</button>
+          ${isAdmin() ? `<button class="btn-secondary btn-sm" data-act="export-reservas">Exportar CSV</button>` : ""}
           <button class="btn-secondary btn-sm" data-act="nueva-reserva-masiva">+ Masiva</button>
           <button class="btn-primary btn-sm" data-act="nueva-reserva">+ Reserva</button>
         </div>
@@ -572,7 +574,7 @@ function reservaRowHTML(r) {
   if (r.estado !== ESTADO_RESERVA.CERRADA && r.estado !== ESTADO_RESERVA.CANCELADA)
     acciones.push(`<button class="btn-primary btn-sm" data-act="cerrar-reserva" data-id="${esc(r.id)}">Cerrar</button>`);
   if (r.estado === ESTADO_RESERVA.CERRADA) acciones.push(`<button class="btn-secondary btn-sm" data-act="reabrir-reserva" data-id="${esc(r.id)}">Reabrir</button>`);
-  acciones.push(`<button class="btn-secondary btn-sm" data-act="asistencia-reserva" data-id="${esc(r.id)}">Asistentes</button>`);
+  acciones.push(`<button class="btn-secondary btn-sm" data-act="asistencia-reserva" data-id="${esc(r.id)}">Participantes</button>`);
   acciones.push(`<button class="btn-secondary btn-sm" data-act="edit-reserva" data-id="${esc(r.id)}">Editar</button>`);
   if (r.estado !== ESTADO_RESERVA.CERRADA && r.estado !== ESTADO_RESERVA.CANCELADA)
     acciones.push(`<button class="btn-secondary btn-sm" data-act="cancelar-reserva" data-id="${esc(r.id)}">Cancelar</button>`);
@@ -709,11 +711,11 @@ async function gestionAsistencia(reservaId) {
   const map = new Map(actual.map((a) => [a.asistenteId, a]));
 
   const root = ROOT();
-  setContext(`Asistencia · ${fmtFecha(r.fecha)}`);
+  setContext(`Participantes · ${fmtFecha(r.fecha)}`);
   root.replaceChildren(...frag(`
     <button class="back-link" data-act="goto-reservas">← Reservas</button>
     <div class="card">
-      <div class="section-title" style="margin:0 0 10px">Asistentes — ${esc(fmtFecha(r.fecha))}</div>
+      <div class="section-title" style="margin:0 0 10px">Participantes — ${esc(fmtFecha(r.fecha))}</div>
       ${asistentes.length ? `<div class="list-grid">${asistentes.map((a) => {
         const cur = map.get(a.id);
         const st = cur?.estado || ESTADO_ASISTENCIA.SIN_MARCAR;
@@ -724,7 +726,7 @@ async function gestionAsistencia(reservaId) {
             <div class="sub"><span class="estado ${st === "presente" ? "activo" : st === "tarde" ? "por_agotarse" : st === "ausente" ? "vencido" : "agotado"}">${st.replace("_", " ")}</span></div></div>
           <div class="actions">${mk("presente", "✅", "ok")}${mk("tarde", "⏱️", "tarde")}${mk("ausente", "❌", "no")}</div>
         </div>`;
-      }).join("")}</div>` : `<div class="empty">Este cliente no tiene asistentes. Agrégalos desde su ficha.</div>`}
+      }).join("")}</div>` : `<div class="empty">Este cliente no tiene participantes. Agrégalos desde su ficha.</div>`}
     </div>`));
   // store reserva/asistentes for marcar handler
   window.__asistCtx = { reservaId, asistentes };
@@ -862,7 +864,7 @@ async function viewCobros() {
     <div class="card">
       <div class="toolbar">
         <div class="section-title" style="margin:0">Historial de pagos</div>
-        <button class="btn-secondary btn-sm" data-act="export-pagos">Exportar CSV</button>
+        ${isAdmin() ? `<button class="btn-secondary btn-sm" data-act="export-pagos">Exportar CSV</button>` : ""}
       </div>
       ${pagos.length ? `<div class="list-grid">${pagos.map((p) =>
         `<div class="row-card">
@@ -877,6 +879,7 @@ async function viewCobros() {
 }
 
 async function exportPagos() {
+  if (!isAdmin()) return adminOnly("Exportar CSV");
   const [pagos, clientes] = await Promise.all([Pagos.listPagos(), Clientes.listClientes()]);
   const nombreCli = (cid) => clientes.find((c) => c.id === cid)?.nombre || "";
   const rows = pagos.map((p) => ({ ...p, cliente: nombreCli(p.clienteId) }));
@@ -958,7 +961,7 @@ async function viewImportar() {
       <label class="modal-body">Entidad a importar
         <select id="impTipo">
           <option value="clientes">Clientes</option>
-          <option value="asistentes">Asistentes (requiere cliente)</option>
+          <option value="asistentes">Participantes (requiere cliente)</option>
           <option value="paquetes">Paquetes (requiere cliente)</option>
           <option value="reservas">Reservas (requiere cliente)</option>
         </select>
@@ -1042,6 +1045,7 @@ async function viewImportar() {
 
 /* ───────────────────────── exports ───────────────────────── */
 async function exportClientes() {
+  if (!isAdmin()) return adminOnly("Exportar CSV");
   const clientes = await Clientes.listClientes();
   descargarCSV("clientes", clientes, [
     { key: "nombre", label: "Nombre" }, { key: "tipo", label: "Tipo" },
@@ -1052,6 +1056,7 @@ async function exportClientes() {
 }
 
 async function exportReservas() {
+  if (!isAdmin()) return adminOnly("Exportar CSV");
   const reservas = await Reservas.listReservas();
   descargarCSV("reservas", reservas, [
     { key: "fecha", label: "Fecha" }, { key: "horaInicioProgramada", label: "Inicio prog" },

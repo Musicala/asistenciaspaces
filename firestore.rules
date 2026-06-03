@@ -1,0 +1,86 @@
+rules_version = '2';
+
+// Asistencia Spaces — reglas Firestore
+// Modelo de seguridad: SOLO usuarios autenticados con Google cuyo correo esté
+// en el allowlist pueden leer/escribir. La misma lista vive en
+// js/core/constants.js (AUTHORIZED_EMAILS) — mantener ambas sincronizadas.
+//
+// Roles (admin/operacion/consulta/finanzas) están preparados vía la función
+// canWrite(). Hoy todos los autorizados pueden operar; para endurecer, restringe
+// write a roles concretos usando custom claims (request.auth.token.role).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function emailAllowed() {
+      return isSignedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in [
+          'alekcaballeromusic@gmail.com',
+          'catalina.medina.leal@gmail.com',
+          'imusicala@gmail.com',
+          'musicalaasesor@gmail.com'
+        ];
+    }
+
+    function canRead() { return emailAllowed(); }
+    function canWrite() { return emailAllowed(); }
+    function isAdmin() {
+      return emailAllowed()
+        && request.auth.token.email in [
+          'alekcaballeromusic@gmail.com',
+          'imusicala@gmail.com'
+        ];
+    }
+
+    match /clientes/{id} {
+      allow read: if canRead();
+      allow write: if canWrite();
+    }
+
+    match /paquetes/{id} {
+      allow read: if canRead();
+      allow write: if canWrite();
+    }
+
+    match /asistentes/{id} {
+      allow read: if canRead();
+      allow write: if canWrite();
+    }
+
+    match /pagos/{id} {
+      allow read: if canRead();
+      allow write: if canWrite();
+    }
+
+    match /reservas/{id} {
+      allow read: if canRead();
+      allow write: if canWrite();
+
+      match /asistencia/{asistenteId} {
+        allow read: if canRead();
+        allow write: if canWrite();
+      }
+    }
+
+    // Auditoría: cualquier autorizado lee y crea; nadie edita/borra.
+    match /auditLogs/{id} {
+      allow read: if isAdmin();
+      allow create: if emailAllowed();
+      allow update, delete: if false;
+    }
+
+    match /usuarios/{id} {
+      allow read: if canRead();
+      allow write: if canWrite();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
