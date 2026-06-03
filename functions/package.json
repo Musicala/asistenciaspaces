@@ -1,0 +1,11 @@
+{
+  "name": "spaces-manager-functions",
+  "description": "Cloud Functions de Spaces Manager — consumo y cobros del lado servidor",
+  "engines": { "node": "20" },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^5.1.0"
+  },
+  "private": true
+}
