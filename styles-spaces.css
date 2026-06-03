@@ -1,0 +1,107 @@
+/* styles-spaces.css — Asistencia Spaces (Firebase edition)
+   Complementa styles.css. Reusa los tokens (--mozart, --ok, etc.). Light only.
+*/
+
+/* ---------- Login gate ---------- */
+.auth-gate{ min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+/* el atributo hidden debe ganarle a display:flex */
+.auth-gate[hidden]{ display:none; }
+[hidden]{ display:none !important; }
+
+/* ---------- Rol solo-lectura: oculta acciones de escritura ---------- */
+body[data-role="consulta"] [data-act^="nuevo-"],
+body[data-role="consulta"] [data-act^="nueva-"],
+body[data-role="consulta"] [data-act^="edit-"],
+body[data-role="consulta"] [data-act^="del-"],
+body[data-role="consulta"] [data-act^="cobrar"],
+body[data-role="consulta"] [data-act^="cerrar"],
+body[data-role="consulta"] [data-act^="iniciar"],
+body[data-role="consulta"] [data-act^="reabrir"],
+body[data-role="consulta"] [data-act^="cancelar"],
+body[data-role="consulta"] [data-act^="anular"],
+body[data-role="consulta"] [data-act="marcar-asistencia"],
+body:not([data-role="admin"]) [data-nav="importar"]{ display:none !important; }
+/* La sección de Auditoría solo para admin */
+body:not([data-role="admin"]) [data-nav="auditoria"]{ display:none !important; }
+.auth-card{ max-width:380px; width:100%; text-align:center; display:grid; gap:12px; justify-items:center; padding:28px 24px; }
+.auth-logo{ width:64px; height:64px; object-fit:contain; }
+.auth-card h1{ font-size:22px; }
+.auth-error{ color:var(--bad); font-size:13px; min-height:18px; margin:0; }
+.auth-hint{ font-size:12px; }
+.muted{ color:var(--muted); }
+
+/* ---------- Header nav ---------- */
+.header-nav{ display:flex; gap:6px; flex-wrap:wrap; }
+.nav-btn{ padding:8px 14px; border-radius:999px; border:1px solid var(--line); background:var(--glass); color:var(--text); cursor:pointer; font-weight:700; font-size:13px; transition:all var(--t-fast); }
+.nav-btn:hover{ background:var(--card2); }
+.nav-btn.active{ background:var(--mozart); color:#fff; border-color:transparent; }
+.user-badge{ font-size:12.5px; font-weight:700; color:var(--muted); max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.btn-sm{ padding:8px 10px; font-size:12.5px; border-radius:12px; }
+
+@media (max-width:760px){
+  .app-header{ flex-wrap:wrap; gap:8px; }
+  .header-nav{ order:3; width:100%; }
+  .user-badge{ max-width:110px; }
+}
+
+/* ---------- KPI cards ---------- */
+.kpi-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(160px,1fr)); gap:12px; margin-bottom:16px; }
+.kpi{ padding:14px 16px; border-radius:var(--r-lg); border:1px solid var(--line); background:var(--card2); box-shadow:var(--shadow2); }
+.kpi-label{ font-size:12px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:.4px; }
+.kpi-value{ font-size:26px; font-weight:900; margin-top:4px; line-height:1; }
+.kpi-sub{ font-size:12px; color:var(--muted); margin-top:4px; }
+.kpi.accent-ok .kpi-value{ color:var(--ok); }
+.kpi.accent-warn .kpi-value{ color:var(--warn); }
+.kpi.accent-bad .kpi-value{ color:var(--bad); }
+.kpi.accent-mozart .kpi-value{ color:var(--mozart); }
+.kpi.accent-brahms .kpi-value{ color:var(--brahms); }
+
+/* ---------- Progress bar (consumo de horas) ---------- */
+.progress{ height:10px; border-radius:999px; background:rgba(11,16,32,.08); overflow:hidden; margin-top:8px; }
+.progress-fill{ height:100%; border-radius:999px; background:linear-gradient(90deg, var(--mozart), var(--beethoven)); transition:width var(--t-mid); }
+.progress-fill.warn{ background:linear-gradient(90deg, var(--warn), var(--brahms)); }
+.progress-fill.bad{ background:var(--bad); }
+.progress-legend{ display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-top:6px; }
+
+/* ---------- Estado pills ---------- */
+.estado{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; font-size:12px; font-weight:800; border:1px solid transparent; }
+.estado.activo{ background:rgba(34,197,94,.12); color:#15803d; }
+.estado.por_agotarse{ background:rgba(245,158,11,.14); color:#b45309; }
+.estado.agotado{ background:rgba(11,16,32,.08); color:var(--muted); }
+.estado.vencido{ background:rgba(239,68,68,.12); color:#b91c1c; }
+.estado.excedido{ background:rgba(206,0,113,.12); color:var(--brahms); }
+.estado.programada{ background:rgba(12,65,196,.10); color:var(--mozart); }
+.estado.en_curso{ background:rgba(245,158,11,.14); color:#b45309; }
+.estado.cerrada{ background:rgba(34,197,94,.12); color:#15803d; }
+.estado.cancelada{ background:rgba(11,16,32,.08); color:var(--muted); }
+
+/* ---------- Listas / filas ---------- */
+.list-grid{ display:grid; gap:10px; }
+.row-card{ display:flex; gap:12px; justify-content:space-between; align-items:flex-start; padding:14px; border-radius:var(--r-lg); border:1px solid var(--line); background:var(--card2); box-shadow:var(--shadow2); }
+.row-card .main{ min-width:0; flex:1; }
+.row-card .title{ font-weight:800; }
+.row-card .sub{ margin-top:4px; font-size:12.5px; color:var(--muted); display:flex; flex-wrap:wrap; gap:8px; }
+.row-card .actions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+.clickable{ cursor:pointer; }
+.clickable:hover{ border-color:rgba(12,65,196,.30); }
+
+.toolbar{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.toolbar .left{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.section-title{ font-size:14px; font-weight:900; margin:18px 0 10px; color:var(--text); }
+
+.modal-body{ display:grid; gap:10px; }
+.modal-body label{ font-size:12.5px; font-weight:700; color:var(--muted); display:grid; gap:4px; }
+.modal-body input, .modal-body select, .modal-body textarea{ padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:var(--inputBg); }
+.grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+@media (max-width:520px){ .grid-2{ grid-template-columns:1fr; } }
+.dialog-msg{ color:var(--bad); font-size:13px; padding:6px 0; }
+
+.dup-warning{ border:1px solid rgba(245,158,11,.4); background:rgba(245,158,11,.08); border-radius:12px; padding:10px; font-size:13px; }
+.back-link{ background:none; border:none; color:var(--mozart); cursor:pointer; font-weight:700; padding:0; margin-bottom:6px; }
+
+/* ---------- Chips de asistencia ---------- */
+.chip{ width:44px; height:40px; display:inline-flex; align-items:center; justify-content:center; border-radius:14px; border:1px solid var(--line); background:var(--card2); cursor:pointer; font-size:16px; }
+.chip:hover{ border-color:rgba(12,65,196,.30); }
+.chip.ok{ background:rgba(34,197,94,.14); border-color:rgba(34,197,94,.30); }
+.chip.no{ background:rgba(239,68,68,.12); border-color:rgba(239,68,68,.28); }
+.chip.tarde{ background:rgba(245,158,11,.16); border-color:rgba(245,158,11,.30); }
