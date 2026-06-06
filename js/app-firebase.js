@@ -41,7 +41,7 @@ function toast(msg, type = "ok") {
 }
 
 // Modal de formulario reutilizable. Devuelve objeto con valores o null.
-function openForm({ title, okText = "Guardar", fields = [], values = {}, extraHTML = "" }) {
+function openForm({ title, okText = "Guardar", fields = [], values = {}, extraHTML = "", onMount = null }) {
   const modal = $("#appModal");
   $("#appModalTitle").textContent = title;
   $("#appModalOk").textContent = okText;
@@ -86,12 +86,15 @@ function openForm({ title, okText = "Guardar", fields = [], values = {}, extraHT
     form.addEventListener("submit", onSubmit);
     $("#appModalCancel").addEventListener("click", onCancel);
     modal.showModal();
+    if (typeof onMount === "function") { try { onMount(form); } catch (e) { console.error(e); } }
   });
 }
 
 async function withBusy(fn) {
+  startLoading();
   try { return await fn(); }
   catch (e) { console.error(e); toast(e?.message || "Ocurrió un error", "bad"); throw e; }
+  finally { stopLoading(); }
 }
 
 /* ───────────────────────── roles ───────────────────────── */
@@ -161,9 +164,25 @@ function navTo(name, params = {}) {
   render();
 }
 
+// Barra de progreso global: soporta llamadas anidadas con un contador.
+let loadingCount = 0;
+function startLoading() {
+  loadingCount++;
+  const bar = $("#loadingBar");
+  if (bar) bar.hidden = false;
+}
+function stopLoading() {
+  loadingCount = Math.max(0, loadingCount - 1);
+  if (loadingCount === 0) {
+    const bar = $("#loadingBar");
+    if (bar) bar.hidden = true;
+  }
+}
+
 async function render() {
   const root = ROOT();
-  root.innerHTML = `<div class="empty">Cargando…</div>`;
+  root.innerHTML = `<div class="loading-block"><span class="loading-spinner"></span>Cargando información…</div>`;
+  startLoading();
   try {
     if (route.name === "dashboard") return root.replaceChildren(...(await viewDashboard()));
     if (route.name === "clientes") return root.replaceChildren(...(await viewClientes()));
@@ -182,6 +201,8 @@ async function render() {
   } catch (e) {
     console.error(e);
     root.innerHTML = `<div class="card"><div class="empty">No se pudo cargar: ${esc(e?.message || e)}</div></div>`;
+  } finally {
+    stopLoading();
   }
 }
 
@@ -467,6 +488,7 @@ function asistenteRowHTML(a) {
         ${a.documento ? `<span>Doc: ${esc(a.documento)}</span>` : ""}
         ${a.telefono ? `<span>📞 ${esc(a.telefono)}</span>` : ""}
         ${a.email ? `<span>✉️ ${esc(a.email)}</span>` : ""}
+        ${a.acudienteNombre ? `<span>👤 Acudiente: ${esc(a.acudienteNombre)}${a.acudienteTelefono ? ` (📞 ${esc(a.acudienteTelefono)})` : ""}</span>` : ""}
         <span>${a.totalVisitas || 0} visitas</span>
       </div>
     </div>
@@ -481,6 +503,8 @@ const asistenteFields = (v = {}) => ([
   { name: "documento", label: "Documento", value: v.documento },
   { name: "telefono", label: "Teléfono", type: "tel", value: v.telefono },
   { name: "email", label: "Email", type: "email", value: v.email },
+  { name: "acudienteNombre", label: "Acudiente (opcional, para menores de edad)", value: v.acudienteNombre },
+  { name: "acudienteTelefono", label: "Teléfono del acudiente (opcional)", type: "tel", value: v.acudienteTelefono },
 ]);
 
 async function nuevoAsistente(clienteId) {
@@ -607,6 +631,23 @@ async function reservaFields(clienteIdFijo) {
   return { cliOpts, paqOpts, clienteId };
 }
 
+// Repuebla el <select> de paquetes según el cliente elegido en el formulario.
+// Así nunca se muestran paquetes de otro cliente.
+function wirePaqueteSelect(form) {
+  const cliSel = form.querySelector('[name="clienteId"]');
+  const paqSel = form.querySelector('[name="paqueteId"]');
+  if (!cliSel || !paqSel) return;
+  const recargar = async () => {
+    const cid = cliSel.value;
+    paqSel.innerHTML = `<option value="">Cargando…</option>`;
+    const paquetes = cid ? await Paquetes.listPaquetesByCliente(cid) : [];
+    paqSel.innerHTML = paquetes.length
+      ? paquetes.map((p) => `<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join("")
+      : `<option value="">(sin paquetes para este cliente)</option>`;
+  };
+  cliSel.addEventListener("change", recargar);
+}
+
 async function nuevaReserva(clienteIdFijo) {
   const { cliOpts, paqOpts, clienteId } = await reservaFields(clienteIdFijo);
   if (!cliOpts.length) { toast("Crea un cliente primero", "warn"); return; }
@@ -620,7 +661,7 @@ async function nuevaReserva(clienteIdFijo) {
     { name: "actividad", label: "Actividad", value: "" },
     { name: "responsable", label: "Responsable", value: "" },
   ];
-  const data = await openForm({ title: "Nueva reserva", fields });
+  const data = await openForm({ title: "Nueva reserva", fields, onMount: wirePaqueteSelect });
   if (!data) return;
   await withBusy(() => Reservas.createReserva(data));
   toast("Reserva creada ✅"); render();
@@ -643,7 +684,7 @@ async function nuevaReservaMasiva() {
       ${["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map((d, i) =>
         `<label style="display:flex;gap:4px;align-items:center;font-weight:600"><input type="checkbox" class="dow" value="${i}">${d}</label>`).join("")}
     </div></label>`;
-  const data = await openForm({ title: "Reservas recurrentes", okText: "Crear todas", fields, extraHTML });
+  const data = await openForm({ title: "Reservas recurrentes", okText: "Crear todas", fields, extraHTML, onMount: wirePaqueteSelect });
   if (!data) return;
   const dias = Array.from(document.querySelectorAll(".dow:checked")).map((c) => Number(c.value));
   const fechas = fechasRecurrentes(data.desde, data.hasta, dias);
@@ -712,24 +753,38 @@ async function gestionAsistencia(reservaId) {
 
   const root = ROOT();
   setContext(`Participantes · ${fmtFecha(r.fecha)}`);
+  const rowHTML = (a) => {
+    const cur = map.get(a.id);
+    const st = cur?.estado || ESTADO_ASISTENCIA.SIN_MARCAR;
+    const mk = (estado, emoji, cls) =>
+      `<button class="chip ${st === estado ? cls : ""}" data-act="marcar-asistencia" data-reserva="${esc(reservaId)}" data-asistente="${esc(a.id)}" data-estado="${estado}">${emoji}</button>`;
+    return `<div class="row-card" data-nombre="${esc((a.nombreCompleto || "").toLowerCase())}">
+      <div class="main"><div class="title">${esc(a.nombreCompleto)}</div>
+        <div class="sub"><span class="estado ${st === "presente" ? "activo" : st === "tarde" ? "por_agotarse" : st === "ausente" ? "vencido" : "agotado"}">${st.replace("_", " ")}</span></div></div>
+      <div class="actions">${mk("presente", "✅", "ok")}${mk("tarde", "⏱️", "tarde")}${mk("ausente", "❌", "no")}</div>
+    </div>`;
+  };
+
   root.replaceChildren(...frag(`
     <button class="back-link" data-act="goto-reservas">← Reservas</button>
     <div class="card">
       <div class="section-title" style="margin:0 0 10px">Participantes — ${esc(fmtFecha(r.fecha))}</div>
-      ${asistentes.length ? `<div class="list-grid">${asistentes.map((a) => {
-        const cur = map.get(a.id);
-        const st = cur?.estado || ESTADO_ASISTENCIA.SIN_MARCAR;
-        const mk = (estado, emoji, cls) =>
-          `<button class="chip ${st === estado ? cls : ""}" data-act="marcar-asistencia" data-reserva="${esc(reservaId)}" data-asistente="${esc(a.id)}" data-estado="${estado}">${emoji}</button>`;
-        return `<div class="row-card">
-          <div class="main"><div class="title">${esc(a.nombreCompleto)}</div>
-            <div class="sub"><span class="estado ${st === "presente" ? "activo" : st === "tarde" ? "por_agotarse" : st === "ausente" ? "vencido" : "agotado"}">${st.replace("_", " ")}</span></div></div>
-          <div class="actions">${mk("presente", "✅", "ok")}${mk("tarde", "⏱️", "tarde")}${mk("ausente", "❌", "no")}</div>
-        </div>`;
-      }).join("")}</div>` : `<div class="empty">Este cliente no tiene participantes. Agrégalos desde su ficha.</div>`}
+      ${asistentes.length ? `<input id="buscarParticipante" class="search-input" placeholder="Buscar participante…" style="width:100%;margin-bottom:10px" />
+      <div class="list-grid" id="participantesList">${asistentes.map(rowHTML).join("")}</div>` : `<div class="empty">Este cliente no tiene participantes. Agrégalos desde su ficha.</div>`}
     </div>`));
   // store reserva/asistentes for marcar handler
   window.__asistCtx = { reservaId, asistentes };
+
+  // Buscador en vivo: filtra por nombre sin perder los chips de asistencia.
+  queueMicrotask(() => {
+    const inp = $("#buscarParticipante");
+    inp?.addEventListener("input", () => {
+      const q = inp.value.toLowerCase();
+      const box = $("#participantesList");
+      const filt = asistentes.filter((a) => (a.nombreCompleto || "").toLowerCase().includes(q));
+      box.innerHTML = filt.length ? filt.map(rowHTML).join("") : `<div class="empty">Sin resultados.</div>`;
+    });
+  });
 }
 
 async function confirmar(titulo, mensaje, okText = "Eliminar") {
@@ -1127,7 +1182,22 @@ async function marcarAsistencia(btn) {
   const ctx = window.__asistCtx;
   const a = ctx?.asistentes?.find((x) => x.id === asistente) || { id: asistente };
   await Asistencia.registrarAsistencia(reserva, a, { estado });
-  await gestionAsistencia(reserva); // re-render
+  // Actualiza solo los chips de esta fila para no perder el buscador.
+  const row = btn.closest(".row-card");
+  if (row) {
+    const clsFor = { presente: "ok", tarde: "tarde", ausente: "no" };
+    row.querySelectorAll("[data-act='marcar-asistencia']").forEach((c) => {
+      c.classList.toggle(clsFor[c.dataset.estado], c.dataset.estado === estado);
+    });
+    const badge = row.querySelector(".estado");
+    if (badge) {
+      const map = { presente: "activo", tarde: "por_agotarse", ausente: "vencido" };
+      badge.className = `estado ${map[estado] || "agotado"}`;
+      badge.textContent = String(estado).replace("_", " ");
+    }
+  } else {
+    await gestionAsistencia(reserva);
+  }
 }
 
 /* ───────────────────────── auth boot ───────────────────────── */

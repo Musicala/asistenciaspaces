@@ -25,7 +25,13 @@ export function calcularEstadoPaquete(paq) {
   const alerta = Number(paq.alertaSaldoMin) || 0;
 
   if (esVencida(paq.fechaVencimiento)) return ESTADO_PAQUETE.VENCIDO;
-  if (consumidos > comprados) return ESTADO_PAQUETE.EXCEDIDO;
+  if (consumidos > comprados) {
+    // Si el excedente ya se cobró por completo, deja de marcarse como "excedido".
+    const excedidos = Number(paq.minutosExcedidos) || 0;
+    const cobrado = Number(paq.excedenteCobradoMin) || 0;
+    const pendiente = excedidos > 0 ? excedidos - cobrado : consumidos - comprados;
+    return pendiente > 0 ? ESTADO_PAQUETE.EXCEDIDO : ESTADO_PAQUETE.AGOTADO;
+  }
   if (restantes <= 0) return ESTADO_PAQUETE.AGOTADO;
   if (restantes <= alerta) return ESTADO_PAQUETE.POR_AGOTARSE;
   return ESTADO_PAQUETE.ACTIVO;

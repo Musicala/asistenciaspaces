@@ -71,6 +71,8 @@ export async function createAsistente(data, { forzar = false } = {}) {
     documentoNormalizado: normalizarDoc(data.documento),
     telefono: String(data.telefono || "").trim(),
     email: String(data.email || "").trim().toLowerCase(),
+    acudienteNombre: String(data.acudienteNombre || "").trim(),
+    acudienteTelefono: String(data.acudienteTelefono || "").trim(),
     activo: data.activo !== false,
     primeraVisita: data.primeraVisita || "",
     ultimaVisita: data.ultimaVisita || "",

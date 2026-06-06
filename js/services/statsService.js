@@ -7,6 +7,7 @@ import { listClientes } from "../data/clientesRepo.js";
 import { listPaquetes, listPaquetesByCliente } from "../data/paquetesRepo.js";
 import { listReservas, listReservasByCliente, listReservasByPaquete } from "../data/reservasRepo.js";
 import { listAsistencia } from "../data/asistenciaRepo.js";
+import { excedentePendienteMin } from "../data/pagosRepo.js";
 import { ESTADO_PAQUETE, ESTADO_RESERVA } from "../core/constants.js";
 import { calcularEstadoPaquete } from "./consumoService.js";
 import { todayISO, esVencida, minToHoras } from "../core/time.js";
@@ -27,7 +28,7 @@ export async function statsGenerales() {
   const minVendidos = sum(paquetes, (p) => p.minutosComprados);
   const minConsumidos = sum(paquetes, (p) => p.minutosConsumidos);
   const minRestantes = sum(paquetes, (p) => Math.max(0, (p.minutosComprados || 0) - (p.minutosConsumidos || 0)));
-  const minExcedidos = sum(paquetes, (p) => p.minutosExcedidos);
+  const minExcedidos = sum(paquetes, (p) => excedentePendienteMin(p));
 
   const reservasHoy = reservas.filter((r) => r.fecha === hoy);
   const proximas = reservas
@@ -89,7 +90,7 @@ export async function statsCliente(clienteId) {
     horasVendidas: minToHoras(sum(paquetes, (p) => p.minutosComprados)),
     horasConsumidas: minToHoras(sum(paquetes, (p) => p.minutosConsumidos)),
     horasRestantes: minToHoras(sum(paquetes, (p) => Math.max(0, (p.minutosComprados || 0) - (p.minutosConsumidos || 0)))),
-    horasExcedidas: minToHoras(sum(paquetes, (p) => p.minutosExcedidos)),
+    horasExcedidas: minToHoras(sum(paquetes, (p) => excedentePendienteMin(p))),
     reservasTotal: reservas.length,
     reservasCerradas: reservas.filter((r) => r.estado === ESTADO_RESERVA.CERRADA).length,
     asistenciaAcumulada: totalAsistencias,
