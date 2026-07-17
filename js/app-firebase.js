@@ -515,16 +515,69 @@ async function nuevoAsistente(clienteId) {
     toast("Participante creado ✅"); render();
   } catch (e) {
     if (e.duplicados?.length) {
-      const nombres = e.duplicados.map((d) => d.nombreCompleto).join(", ");
-      const conf = await openForm({
-        title: "Posible duplicado",
-        okText: "Crear de todos modos",
-        fields: [],
-        extraHTML: `<div class="dup-warning">Ya existe(n): <b>${esc(nombres)}</b>.<br>¿Crear de todas formas?</div>`,
-      });
-      if (conf) { await withBusy(() => Asistentes.createAsistente({ clienteId, ...data }, { forzar: true })); toast("Participante creado ✅"); render(); }
+      await resolverDuplicado(clienteId, data, e.duplicados);
     } else { toast(e.message, "bad"); }
   }
+}
+
+// Campos que se pueden completar al fusionar con un participante existente.
+const CAMPOS_FUSION = [
+  ["documento", "Documento"],
+  ["telefono", "Teléfono"],
+  ["email", "Email"],
+  ["acudienteNombre", "Acudiente"],
+  ["acudienteTelefono", "Tel. acudiente"],
+];
+
+async function resolverDuplicado(clienteId, data, duplicados) {
+  const resumen = duplicados.map((d) => {
+    const extra = [d.documento && `Doc: ${d.documento}`, d.telefono && `📞 ${d.telefono}`, d.email && `✉️ ${d.email}`].filter(Boolean).join(" · ");
+    return `<li><b>${esc(d.nombreCompleto)}</b>${extra ? ` — ${esc(extra)}` : ""}</li>`;
+  }).join("");
+
+  const fields = [{
+    name: "accion", label: "¿Qué deseas hacer?", type: "select",
+    options: [
+      { value: "fusionar", label: "Completar los datos del existente con la info nueva" },
+      { value: "duplicar", label: "Crear de todos modos (duplicado)" },
+    ],
+  }];
+  if (duplicados.length > 1) {
+    fields.push({
+      name: "dupId", label: "¿Con cuál participante fusionar?", type: "select",
+      options: duplicados.map((d) => ({ value: d.id, label: d.nombreCompleto })),
+    });
+  }
+
+  const res = await openForm({
+    title: "Posible duplicado",
+    okText: "Continuar",
+    fields,
+    extraHTML: `<div class="dup-warning">Ya existe(n) participante(s) parecido(s):<ul style="margin:6px 0 0 18px">${resumen}</ul><br>Puedes completar la ficha existente con los datos nuevos, crear un duplicado, o cancelar para dejar todo como está.</div>`,
+  });
+  if (!res) return; // dejar así
+
+  if (res.accion === "duplicar") {
+    await withBusy(() => Asistentes.createAsistente({ clienteId, ...data }, { forzar: true }));
+    toast("Participante creado ✅"); render();
+    return;
+  }
+
+  // Fusionar: rellena solo los campos vacíos del existente con la info nueva.
+  const objetivo = duplicados.find((d) => d.id === res.dupId) || duplicados[0];
+  const patch = {};
+  for (const [campo] of CAMPOS_FUSION) {
+    const nuevo = String(data[campo] || "").trim();
+    const actual = String(objetivo[campo] || "").trim();
+    if (nuevo && !actual) patch[campo] = nuevo;
+  }
+  if (!Object.keys(patch).length) {
+    toast("El participante existente ya tiene todos esos datos; no hay nada que agregar.", "warn");
+    return;
+  }
+  const agregados = CAMPOS_FUSION.filter(([c]) => patch[c]).map(([, lbl]) => lbl).join(", ");
+  await withBusy(() => Asistentes.updateAsistente(objetivo.id, patch));
+  toast(`Datos agregados a ${objetivo.nombreCompleto}: ${agregados} ✅`); render();
 }
 
 async function editarAsistente(id, clienteId) {
