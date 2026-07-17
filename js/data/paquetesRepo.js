@@ -5,7 +5,7 @@ import {
   query, where, orderBy, docData, listData, stampCreate, stampUpdate, writeAudit,
 } from "./base.js";
 import {
-  COLLECTIONS, AUDIT_ACCION, REGLA_COBRO_DEFAULT, ALERTA_SALDO_MIN_DEFAULT, ESTADO_PAQUETE,
+  COLLECTIONS, AUDIT_ACCION, REGLA_COBRO_DEFAULT, ALERTA_SALDO_MIN_DEFAULT, ESTADO_PAQUETE, CATEGORIA_PAQUETE,
 } from "../core/constants.js";
 import { horasToMin } from "../core/time.js";
 
@@ -36,6 +36,10 @@ export async function createPaquete(data) {
   const payload = {
     clienteId: String(data.clienteId || ""),
     nombre: String(data.nombre || "Paquete de horas").trim(),
+    // Los paquetes existentes no tienen categoría; se interpretan como regulares.
+    categoria: data.categoria === CATEGORIA_PAQUETE.VACACIONAL
+      ? CATEGORIA_PAQUETE.VACACIONAL
+      : CATEGORIA_PAQUETE.REGULAR,
     horasCompradas,
     minutosComprados,
     minutosConsumidos: 0,

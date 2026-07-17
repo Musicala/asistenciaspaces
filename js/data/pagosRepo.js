@@ -28,6 +28,8 @@ function buildPago(data) {
   return {
     clienteId: String(data.clienteId || ""),
     paqueteId: String(data.paqueteId || ""),
+    paqueteNombre: String(data.paqueteNombre || "").trim(),
+    paqueteCategoria: String(data.paqueteCategoria || "").trim(),
     reservaId: String(data.reservaId || ""),
     concepto: data.concepto || CONCEPTO_PAGO.OTRO,
     monto: Math.round(Number(data.monto) || 0),

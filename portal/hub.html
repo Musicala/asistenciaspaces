@@ -1,0 +1,1629 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
+
+  <title>Spaces HUB | Panel empresarial</title>
+
+  <meta
+    name="description"
+    content="Panel empresarial de Spaces para consultar horas contratadas, consumo del servicio, sesiones, participantes, historial reciente y condiciones del servicio."
+  />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="color-scheme" content="light only" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+
+  <link rel="icon" href="./assets/favicon.png" />
+  <link rel="apple-touch-icon" href="./assets/favicon.png" />
+
+  <link rel="stylesheet" href="./css/styles.css" />
+
+  <style>
+    :root{
+      --bg:#ffffff;
+      --bg-soft:#f8fbff;
+      --bg-muted:#f8fafc;
+      --card:rgba(255,255,255,.92);
+      --card-strong:rgba(255,255,255,.96);
+      --line:#e5e7eb;
+      --line-soft:#edf2f7;
+      --text:#111827;
+      --muted:#6b7280;
+      --muted-2:#374151;
+      --blue:#1d4ed8;
+      --blue-2:#0c41c4;
+      --indigo:#4f46e5;
+      --blue-soft:#eff6ff;
+      --blue-soft-2:#eef4ff;
+      --success:#059669;
+      --warning:#d97706;
+      --shadow:0 14px 34px rgba(15,23,42,.08);
+      --shadow-soft:0 8px 22px rgba(15,23,42,.05);
+      --radius-xl:28px;
+      --radius-lg:22px;
+      --radius-md:18px;
+      --radius-sm:14px;
+      --radius-pill:999px;
+    }
+
+    *{
+      box-sizing:border-box;
+    }
+
+    html{
+      scroll-behavior:smooth;
+    }
+
+    body{
+      margin:0;
+      font-family:"Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+
+    .hub-page{
+      min-height:100vh;
+      position:relative;
+      overflow-x:hidden;
+      background:
+        radial-gradient(circle at top left, rgba(59,130,246,.10), transparent 28%),
+        radial-gradient(circle at top right, rgba(168,85,247,.08), transparent 24%),
+        linear-gradient(180deg, #ffffff 0%, #f8fbff 52%, #ffffff 100%);
+    }
+
+    .skip-link{
+      position:absolute;
+      left:-9999px;
+      top:auto;
+      width:1px;
+      height:1px;
+      overflow:hidden;
+    }
+
+    .skip-link:focus{
+      left:16px;
+      top:16px;
+      width:auto;
+      height:auto;
+      padding:10px 14px;
+      border-radius:12px;
+      background:#fff;
+      color:#111827;
+      z-index:50;
+      box-shadow:0 8px 24px rgba(15,23,42,.12);
+    }
+
+    .hub-bg-orb{
+      position:fixed;
+      inset:auto;
+      border-radius:999px;
+      filter:blur(78px);
+      opacity:.24;
+      pointer-events:none;
+      z-index:0;
+    }
+
+    .hub-bg-orb.orb-a{
+      width:260px;
+      height:260px;
+      top:10px;
+      left:-80px;
+      background:rgba(59,130,246,.34);
+    }
+
+    .hub-bg-orb.orb-b{
+      width:340px;
+      height:340px;
+      right:-90px;
+      top:160px;
+      background:rgba(168,85,247,.18);
+    }
+
+    .hub-bg-grid{
+      position:fixed;
+      inset:0;
+      background-image:
+        linear-gradient(to right, rgba(15,23,42,.035) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(15,23,42,.035) 1px, transparent 1px);
+      background-size:24px 24px;
+      mask-image:linear-gradient(to bottom, rgba(0,0,0,.6), transparent 82%);
+      pointer-events:none;
+      z-index:0;
+    }
+
+    .hub-shell{
+      position:relative;
+      z-index:1;
+      max-width:1280px;
+      margin:0 auto;
+      padding:28px 20px 60px;
+      display:flex;
+      flex-direction:column;
+      gap:20px;
+    }
+
+    .hub-topbar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:16px;
+      padding:18px 20px;
+      border-radius:24px;
+      background:rgba(255,255,255,.84);
+      backdrop-filter:blur(16px);
+      border:1px solid rgba(255,255,255,.8);
+      box-shadow:
+        0 14px 34px rgba(15,23,42,.08),
+        inset 0 1px 0 rgba(255,255,255,.72);
+    }
+
+    .hub-brand{
+      display:flex;
+      align-items:center;
+      gap:14px;
+      min-width:0;
+    }
+
+    .hub-brand-logo{
+      width:50px;
+      height:50px;
+      object-fit:contain;
+      border-radius:16px;
+      background:#fff;
+      padding:6px;
+      box-shadow:0 6px 18px rgba(15,23,42,.08);
+      flex:0 0 auto;
+    }
+
+    .hub-brand-copy{
+      min-width:0;
+      display:flex;
+      flex-direction:column;
+      gap:3px;
+    }
+
+    .hub-eyebrow{
+      font-size:12px;
+      font-weight:700;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:var(--muted);
+      margin:0;
+    }
+
+    .hub-title{
+      margin:0;
+      font-size:1.08rem;
+      font-weight:800;
+      color:var(--text);
+      line-height:1.15;
+    }
+
+    .hub-subtitle{
+      margin:0;
+      font-size:.94rem;
+      color:var(--muted);
+      line-height:1.45;
+    }
+
+    .user-box{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .user-chip{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      padding:10px 14px;
+      background:#f8fafc;
+      border:1px solid var(--line);
+      border-radius:15px;
+      min-width:0;
+    }
+
+    .user-chip-label{
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--muted);
+      margin:0;
+    }
+
+    .user-email{
+      font-size:13px;
+      font-weight:600;
+      color:var(--text);
+      word-break:break-word;
+      margin:0;
+    }
+
+    .btn{
+      appearance:none;
+      border:none;
+      cursor:pointer;
+      padding:12px 16px;
+      border-radius:14px;
+      font-family:inherit;
+      font-size:.94rem;
+      font-weight:700;
+      transition:transform .15s ease, box-shadow .15s ease, background .15s ease, opacity .15s ease;
+    }
+
+    .btn:hover{
+      transform:translateY(-1px);
+    }
+
+    .btn:disabled{
+      opacity:.65;
+      cursor:not-allowed;
+      transform:none;
+    }
+
+    .btn-secondary{
+      background:#f8fafc;
+      color:var(--text);
+      border:1px solid var(--line);
+      box-shadow:var(--shadow-soft);
+    }
+
+    .btn-primary{
+      background:linear-gradient(135deg, var(--blue-2), var(--indigo));
+      color:#fff;
+      box-shadow:0 14px 28px rgba(79,70,229,.20);
+    }
+
+    .btn-ghost{
+      background:#fff;
+      color:var(--text);
+      border:1px solid var(--line);
+    }
+
+    .hero-panel{
+      display:grid;
+      grid-template-columns:1.06fr .94fr;
+      gap:18px;
+    }
+
+    .hero-card-main,
+    .hero-card-side{
+      background:rgba(255,255,255,.88);
+      backdrop-filter:blur(16px);
+      border:1px solid rgba(255,255,255,.74);
+      box-shadow:
+        0 16px 36px rgba(15,23,42,.08),
+        inset 0 1px 0 rgba(255,255,255,.72);
+      border-radius:28px;
+      padding:22px;
+    }
+
+    .hero-card-main{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+
+    .hero-card-main h2,
+    .hero-card-side h2{
+      margin:0;
+      font-size:1.28rem;
+      line-height:1.15;
+      color:var(--text);
+    }
+
+    .hero-card-main p,
+    .hero-card-side p{
+      margin:0;
+      color:var(--muted);
+      line-height:1.6;
+      font-size:.96rem;
+    }
+
+    .hero-inline-points{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:2px;
+    }
+
+    .hero-point{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 12px;
+      border-radius:999px;
+      background:#f8fafc;
+      border:1px solid var(--line);
+      color:#374151;
+      font-size:.9rem;
+      font-weight:600;
+    }
+
+    .hero-card-side{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+      justify-content:space-between;
+    }
+
+    .hero-mini-list{
+      display:grid;
+      gap:10px;
+    }
+
+    .hero-mini-item{
+      padding:14px 16px;
+      border-radius:16px;
+      background:#f8fafc;
+      border:1px solid var(--line);
+    }
+
+    .hero-mini-item strong{
+      display:block;
+      font-size:.92rem;
+      color:var(--text);
+      margin-bottom:4px;
+    }
+
+    .hero-mini-item span{
+      display:block;
+      font-size:.89rem;
+      color:var(--muted);
+      line-height:1.5;
+    }
+
+    .dashboard-grid{
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0, 1fr));
+      gap:16px;
+    }
+
+    .dashboard-card{
+      background:rgba(255,255,255,.92);
+      border:1px solid rgba(255,255,255,.78);
+      border-radius:22px;
+      padding:18px;
+      box-shadow:
+        0 12px 30px rgba(15,23,42,.07),
+        inset 0 1px 0 rgba(255,255,255,.72);
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      min-height:128px;
+      justify-content:center;
+    }
+
+    .dashboard-label{
+      font-size:12px;
+      font-weight:700;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+
+    .dashboard-value{
+      font-size:1.92rem;
+      line-height:1;
+      font-weight:800;
+      color:var(--text);
+      letter-spacing:-.03em;
+      word-break:break-word;
+    }
+
+    .dashboard-help{
+      font-size:.88rem;
+      color:var(--muted);
+      line-height:1.5;
+    }
+
+    .content-grid{
+      display:grid;
+      grid-template-columns:minmax(0, 1.24fr) minmax(320px, .76fr);
+      gap:18px;
+      align-items:start;
+    }
+
+    .stack{
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+      min-width:0;
+    }
+
+    .section{
+      background:rgba(255,255,255,.92);
+      border:1px solid rgba(255,255,255,.78);
+      border-radius:24px;
+      padding:22px;
+      box-shadow:
+        0 14px 34px rgba(15,23,42,.07),
+        inset 0 1px 0 rgba(255,255,255,.72);
+      display:flex;
+      flex-direction:column;
+      gap:16px;
+      min-width:0;
+    }
+
+    .section-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:14px;
+      flex-wrap:wrap;
+    }
+
+    .section-title-wrap{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      min-width:0;
+    }
+
+    .section-title{
+      margin:0;
+      font-size:1.12rem;
+      font-weight:800;
+      color:var(--text);
+      line-height:1.2;
+    }
+
+    .section-copy{
+      margin:0;
+      font-size:.94rem;
+      color:var(--muted);
+      line-height:1.56;
+      max-width:72ch;
+    }
+
+    .section-tag{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 12px;
+      border-radius:999px;
+      background:#f8fafc;
+      border:1px solid var(--line);
+      color:#374151;
+      font-size:.84rem;
+      font-weight:700;
+      white-space:nowrap;
+    }
+
+    .subtle-note{
+      margin:0;
+      font-size:.88rem;
+      line-height:1.55;
+      color:var(--muted);
+    }
+
+    .progress-card{
+      background:linear-gradient(180deg, rgba(255,255,255,.97), rgba(248,250,252,.98));
+      gap:18px;
+    }
+
+    .progress-badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 12px;
+      border-radius:999px;
+      background:var(--blue-soft);
+      border:1px solid #dbeafe;
+      color:var(--blue);
+      font-size:.88rem;
+      font-weight:700;
+    }
+
+    .progress-hero{
+      display:grid;
+      grid-template-columns:minmax(0, 1fr) auto;
+      gap:16px;
+      align-items:end;
+      padding:18px;
+      border-radius:22px;
+      background:
+        radial-gradient(circle at top right, rgba(79,70,229,.10), transparent 36%),
+        linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      border:1px solid #e8eefb;
+      box-shadow:var(--shadow-soft);
+    }
+
+    .progress-hero-main{
+      min-width:0;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+
+    .progress-hero-label{
+      margin:0;
+      font-size:12px;
+      font-weight:700;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+
+    .progress-hero-value{
+      margin:0;
+      font-size:2rem;
+      line-height:1;
+      font-weight:800;
+      color:var(--text);
+      letter-spacing:-.03em;
+      word-break:break-word;
+    }
+
+    .progress-hero-subtext{
+      margin:0;
+      font-size:.94rem;
+      line-height:1.55;
+      color:var(--muted);
+    }
+
+    .progress-percent-pill{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:92px;
+      padding:12px 14px;
+      border-radius:18px;
+      background:#eef2ff;
+      color:#312e81;
+      border:1px solid #dfe6ff;
+      font-size:1rem;
+      font-weight:800;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.7);
+    }
+
+    .progress-bar-wrap{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+
+    .progress-bar-meta{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .progress-bar-caption{
+      margin:0;
+      font-size:.9rem;
+      color:var(--muted);
+      line-height:1.4;
+    }
+
+    .progress-percent-inline{
+      margin:0;
+      font-size:.92rem;
+      font-weight:700;
+      color:#374151;
+    }
+
+    .progress-bar{
+      height:14px;
+      width:100%;
+      border-radius:999px;
+      background:#e8eefb;
+      overflow:hidden;
+      position:relative;
+      box-shadow:inset 0 1px 2px rgba(15,23,42,.06);
+    }
+
+    .progress-fill{
+      height:100%;
+      width:0%;
+      border-radius:999px;
+      background:linear-gradient(90deg, var(--blue-2), var(--indigo));
+      transition:width .45s ease;
+      box-shadow:0 6px 18px rgba(79,70,229,.28);
+      position:relative;
+    }
+
+    .progress-fill::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(180deg, rgba(255,255,255,.25), rgba(255,255,255,0));
+      pointer-events:none;
+    }
+
+    .metrics-grid{
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:12px;
+    }
+
+    .metric-card{
+      border:1px solid #e6ebf4;
+      background:linear-gradient(180deg, #f9fbff 0%, #ffffff 100%);
+      border-radius:18px;
+      padding:14px;
+      min-height:92px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      gap:8px;
+      box-shadow:0 6px 16px rgba(15,23,42,.035);
+    }
+
+    .metric-label{
+      margin:0;
+      font-size:12px;
+      font-weight:700;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+
+    .metric-value{
+      margin:0;
+      font-size:1.08rem;
+      font-weight:800;
+      color:var(--text);
+      line-height:1.2;
+      word-break:break-word;
+    }
+
+    .metric-help{
+      margin:0;
+      font-size:.82rem;
+      line-height:1.45;
+      color:var(--muted);
+    }
+
+    .progress-footnote{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      padding:14px 16px;
+      border-radius:18px;
+      background:#fbfdff;
+      border:1px solid #edf2f8;
+    }
+
+    .progress-footnote p{
+      margin:0;
+      font-size:.92rem;
+      line-height:1.58;
+      color:var(--muted-2);
+    }
+
+    #progressText{
+      word-break:break-word;
+    }
+
+    .panel-toolbar{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+    }
+
+    .segmented{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+
+    .segmented-btn{
+      appearance:none;
+      border:1px solid var(--line);
+      background:#fff;
+      color:#374151;
+      padding:10px 13px;
+      border-radius:999px;
+      font:inherit;
+      font-size:.88rem;
+      font-weight:700;
+      cursor:pointer;
+      transition:all .16s ease;
+    }
+
+    .segmented-btn:hover{
+      transform:translateY(-1px);
+      box-shadow:var(--shadow-soft);
+    }
+
+    .segmented-btn.is-active{
+      background:var(--blue-soft);
+      border-color:#cfe0ff;
+      color:var(--blue-2);
+      box-shadow:0 10px 20px rgba(29,78,216,.08);
+    }
+
+    .panel-stack{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+
+    .panel{
+      display:none;
+      animation:fadeIn .18s ease;
+    }
+
+    .panel.is-active{
+      display:block;
+    }
+
+    @keyframes fadeIn{
+      from{ opacity:0; transform:translateY(4px); }
+      to{ opacity:1; transform:translateY(0); }
+    }
+
+    .summary-strip{
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:12px;
+    }
+
+    .summary-item{
+      padding:14px 16px;
+      border-radius:18px;
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, #fbfdff, #ffffff);
+    }
+
+    .summary-item-label{
+      margin:0 0 6px 0;
+      font-size:12px;
+      font-weight:700;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+
+    .summary-item-value{
+      margin:0;
+      font-size:1rem;
+      font-weight:800;
+      color:var(--text);
+      line-height:1.35;
+    }
+
+    .summary-item-help{
+      margin:6px 0 0 0;
+      font-size:.84rem;
+      line-height:1.48;
+      color:var(--muted);
+    }
+
+    .history-preview{
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:12px;
+    }
+
+    .history-pill{
+      border:1px solid var(--line);
+      border-radius:18px;
+      background:linear-gradient(180deg, #fbfdff, #ffffff);
+      padding:14px 16px;
+    }
+
+    .history-pill h3{
+      margin:0 0 6px 0;
+      font-size:12px;
+      font-weight:700;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+
+    .history-pill p{
+      margin:0;
+      font-size:.92rem;
+      line-height:1.52;
+      color:var(--muted-2);
+    }
+
+    .collapse{
+      display:block;
+    }
+
+    .collapse[hidden]{
+      display:none !important;
+    }
+
+    .table-wrap{
+      overflow:auto;
+      border-radius:18px;
+      border:1px solid var(--line-soft);
+      background:#fbfdff;
+    }
+
+    .table{
+      width:100%;
+      border-collapse:collapse;
+      min-width:700px;
+    }
+
+    .table th{
+      text-align:left;
+      font-size:12px;
+      color:var(--muted);
+      padding:14px 16px;
+      background:#f8fafc;
+      border-bottom:1px solid var(--line);
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      white-space:nowrap;
+    }
+
+    .table td{
+      padding:14px 16px;
+      border-top:1px solid var(--line-soft);
+      font-size:14px;
+      color:var(--text);
+      vertical-align:top;
+      line-height:1.54;
+    }
+
+    .table tbody tr:first-child td{
+      border-top:none;
+    }
+
+    .table tbody tr:hover{
+      background:#f8fbff;
+    }
+
+    .table-note{
+      font-size:.88rem;
+      color:var(--muted);
+      margin:0 0 12px 0;
+    }
+
+    .info-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+      gap:14px;
+    }
+
+    .info-card{
+      padding:18px;
+      border-radius:18px;
+      background:linear-gradient(180deg, #f8fafc, #ffffff);
+      border:1px solid var(--line);
+      box-shadow:0 8px 20px rgba(15,23,42,.04);
+      min-height:116px;
+    }
+
+    .info-card h3{
+      margin:0;
+      font-size:15px;
+      font-weight:700;
+      color:var(--text);
+      line-height:1.3;
+    }
+
+    .info-card p{
+      margin:8px 0 0 0;
+      font-size:13px;
+      color:var(--muted);
+      line-height:1.64;
+      word-break:break-word;
+    }
+
+    .info-panel-card{
+      border:1px solid var(--line);
+      border-radius:18px;
+      background:linear-gradient(180deg, #fbfdff, #ffffff);
+      padding:16px;
+      box-shadow:0 8px 20px rgba(15,23,42,.035);
+    }
+
+    .info-panel-card h3{
+      margin:0 0 8px 0;
+      font-size:1rem;
+      font-weight:800;
+      color:var(--text);
+    }
+
+    .info-panel-card p{
+      margin:0;
+      font-size:.92rem;
+      line-height:1.6;
+      color:var(--muted-2);
+    }
+
+    .info-panel-card + .info-panel-card{
+      margin-top:12px;
+    }
+
+    .terms-container{
+      max-height:360px;
+      overflow:auto;
+      border-radius:18px;
+      border:1px solid var(--line);
+      background:#fcfcfd;
+      padding:18px;
+      font-size:14px;
+      line-height:1.72;
+      color:#374151;
+    }
+
+    .terms-container h1,
+    .terms-container h2,
+    .terms-container h3{
+      color:var(--text);
+    }
+
+    @media (max-width: 1080px){
+      .hero-panel{
+        grid-template-columns:1fr;
+      }
+
+      .content-grid{
+        grid-template-columns:1fr;
+      }
+
+      .dashboard-grid{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+      }
+
+      .metrics-grid,
+      .summary-strip,
+      .history-preview{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 720px){
+      .hub-shell{
+        padding:22px 14px 40px;
+        gap:16px;
+      }
+
+      .hub-topbar{
+        flex-direction:column;
+        align-items:stretch;
+        padding:16px;
+      }
+
+      .user-box{
+        width:100%;
+        justify-content:stretch;
+        flex-direction:column;
+        align-items:stretch;
+      }
+
+      .user-chip{
+        width:100%;
+      }
+
+      .dashboard-grid{
+        grid-template-columns:1fr;
+      }
+
+      .dashboard-card,
+      .hero-card-main,
+      .hero-card-side,
+      .section{
+        border-radius:20px;
+        padding:18px;
+      }
+
+      .hero-card-main h2,
+      .hero-card-side h2{
+        font-size:1.15rem;
+      }
+
+      .dashboard-value{
+        font-size:1.72rem;
+      }
+
+      .progress-hero{
+        grid-template-columns:1fr;
+        align-items:start;
+      }
+
+      .progress-hero-value{
+        font-size:1.7rem;
+      }
+
+      .progress-percent-pill{
+        min-width:auto;
+        width:max-content;
+      }
+
+      .metrics-grid,
+      .summary-strip,
+      .history-preview{
+        grid-template-columns:1fr;
+      }
+
+      .table{
+        min-width:620px;
+      }
+    }
+
+    @media (max-width: 520px){
+      .hub-shell{
+        padding:18px 12px 34px;
+      }
+
+      .progress-card{
+        gap:16px;
+      }
+
+      .progress-hero{
+        padding:16px;
+        border-radius:18px;
+      }
+
+      .metric-card{
+        min-height:auto;
+      }
+
+      .dashboard-value{
+        font-size:1.58rem;
+      }
+
+      .dashboard-card{
+        min-height:unset;
+      }
+
+      .table{
+        min-width:560px;
+      }
+    }
+  </style>
+</head>
+
+<body class="hub-page">
+  <a href="#mainContent" class="skip-link">Saltar al contenido principal</a>
+
+  <div class="hub-bg-orb orb-a" aria-hidden="true"></div>
+  <div class="hub-bg-orb orb-b" aria-hidden="true"></div>
+  <div class="hub-bg-grid" aria-hidden="true"></div>
+
+  <main id="mainContent" class="hub-shell">
+    <header class="hub-topbar" aria-label="Encabezado del panel">
+      <div class="hub-brand">
+        <img
+          src="./assets/logo.png"
+          alt="Logo de Spaces"
+          class="hub-brand-logo"
+          onerror="this.style.display='none'"
+        />
+
+        <div class="hub-brand-copy">
+          <p class="hub-eyebrow">Panel empresarial</p>
+          <h1 class="hub-title">Spaces HUB</h1>
+          <p class="hub-subtitle">Consulta el estado del servicio, la bolsa de horas, los registros recientes y la información vinculada a tu empresa.</p>
+        </div>
+      </div>
+
+      <div class="user-box">
+        <div class="user-chip" aria-live="polite">
+          <p class="user-chip-label">Correo de acceso</p>
+          <p class="user-email" id="userEmail">Cargando...</p>
+        </div>
+
+        <button class="btn btn-secondary" id="logoutBtn" type="button">
+          Cerrar sesión
+        </button>
+      </div>
+    </header>
+
+    <section class="hero-panel" aria-label="Resumen principal del servicio">
+      <article class="hero-card-main">
+        <h2>Vista general del servicio contratado</h2>
+        <p>
+          Aquí encuentran un resumen ejecutivo del servicio asociado a su empresa:
+          horas contratadas, consumo actual, sesiones registradas, participantes y condiciones generales.
+          Todo lo importante junto, para no andar cazando datos por media interfaz.
+        </p>
+
+        <div class="hero-inline-points">
+          <span class="hero-point">⏱️ Bolsa de horas</span>
+          <span class="hero-point">🗓️ Sesiones registradas</span>
+          <span class="hero-point">👥 Participantes</span>
+        </div>
+      </article>
+
+      <aside class="hero-card-side" aria-label="Ayuda rápida">
+        <h2>¿Qué podrán revisar aquí?</h2>
+
+        <div class="hero-mini-list">
+          <div class="hero-mini-item">
+            <strong>Resumen ejecutivo</strong>
+            <span>Horas compradas, horas usadas, saldo disponible y vigencia general del servicio.</span>
+          </div>
+
+          <div class="hero-mini-item">
+            <strong>Historial bajo demanda</strong>
+            <span>La tabla completa ya no queda estorbando desde el principio. Se abre solo cuando la quieran ver.</span>
+          </div>
+
+          <div class="hero-mini-item">
+            <strong>Información organizada</strong>
+            <span>Empresa, bolsa, talleres y participantes en secciones más limpias y fáciles de consultar.</span>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="dashboard-grid" aria-label="Indicadores principales">
+      <article class="dashboard-card">
+        <div class="dashboard-label">Horas compradas</div>
+        <div class="dashboard-value" id="horasTotales">—</div>
+        <div class="dashboard-help">Cantidad total de horas asignadas al paquete actual del servicio.</div>
+      </article>
+
+      <article class="dashboard-card">
+        <div class="dashboard-label">Horas usadas</div>
+        <div class="dashboard-value" id="horasUsadas">—</div>
+        <div class="dashboard-help">Tiempo descontado según la duración registrada de las sesiones.</div>
+      </article>
+
+      <article class="dashboard-card">
+        <div class="dashboard-label">Horas disponibles</div>
+        <div class="dashboard-value" id="horasPendientes">—</div>
+        <div class="dashboard-help">Saldo restante del paquete actualmente disponible.</div>
+      </article>
+
+      <article class="dashboard-card">
+        <div class="dashboard-label">Vigencia</div>
+        <div class="dashboard-value" id="vigencia">—</div>
+        <div class="dashboard-help">Rango general de fechas del servicio o de sus talleres asociados.</div>
+      </article>
+    </section>
+
+    <div class="content-grid">
+      <div class="stack">
+        <section class="section progress-card" aria-labelledby="progressTitle">
+          <div class="section-head">
+            <div class="section-title-wrap">
+              <h2 class="section-title" id="progressTitle">Consumo del servicio</h2>
+              <p class="section-copy">
+                Visualicen rápidamente el avance del paquete con base en las horas registradas en el sistema.
+              </p>
+            </div>
+
+            <div class="progress-badge">Seguimiento activo</div>
+          </div>
+
+          <div class="progress-hero">
+            <div class="progress-hero-main">
+              <p class="progress-hero-label">Estado actual del paquete</p>
+              <p class="progress-hero-value" id="consumoHeroValue">—</p>
+              <p class="progress-hero-subtext" id="consumoHeroSubtext">Horas usadas frente al total contratado.</p>
+            </div>
+
+            <div class="progress-percent-pill" id="progressPercentLabel">—%</div>
+          </div>
+
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-meta">
+              <p class="progress-bar-caption">El porcentaje se actualiza automáticamente según el tiempo registrado en las sesiones asociadas a esta empresa.</p>
+              <p class="progress-percent-inline" id="progressPercentInline">Consumo actual: —%</p>
+            </div>
+
+            <div
+              class="progress-bar"
+              role="progressbar"
+              aria-label="Porcentaje consumido del servicio"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="0"
+            >
+              <div class="progress-fill" id="progressFill"></div>
+            </div>
+          </div>
+
+          <div class="metrics-grid" aria-label="Resumen rápido del servicio">
+            <article class="metric-card">
+              <p class="metric-label">Horas usadas</p>
+              <p class="metric-value" id="consumoMetricUsadas">—</p>
+              <p class="metric-help">Tiempo ya consumido del paquete.</p>
+            </article>
+
+            <article class="metric-card">
+              <p class="metric-label">Disponibles</p>
+              <p class="metric-value" id="consumoMetricDisponibles">—</p>
+              <p class="metric-help">Saldo actual de horas por usar.</p>
+            </article>
+
+            <article class="metric-card">
+              <p class="metric-label">Sesiones</p>
+              <p class="metric-value" id="consumoMetricSesiones">—</p>
+              <p class="metric-help">Registros de sesión cargados.</p>
+            </article>
+
+            <article class="metric-card">
+              <p class="metric-label">Talleres</p>
+              <p class="metric-value" id="consumoMetricTalleres">—</p>
+              <p class="metric-help">Talleres asociados al servicio.</p>
+            </article>
+
+            <article class="metric-card">
+              <p class="metric-label">Participantes</p>
+              <p class="metric-value" id="consumoMetricParticipantes">—</p>
+              <p class="metric-help">Personas vinculadas activamente.</p>
+            </article>
+
+            <article class="metric-card">
+              <p class="metric-label">Vigencia</p>
+              <p class="metric-value" id="consumoMetricVigencia">—</p>
+              <p class="metric-help">Rango general del servicio actual.</p>
+            </article>
+          </div>
+
+          <div class="progress-footnote">
+            <p id="progressNote">
+              Este resumen ayuda a ver el estado del paquete sin tener que abrir tablas o revisar reportes completos.
+            </p>
+            <p id="progressText" aria-live="polite">—</p>
+          </div>
+        </section>
+
+        <section class="section" aria-labelledby="historyTitle">
+          <div class="section-head">
+            <div class="section-title-wrap">
+              <h2 class="section-title" id="historyTitle">Historial reciente</h2>
+              <p class="section-copy">
+                Revisen movimientos y sesiones registradas solo cuando lo necesiten, sin dejar una tabla enorme ocupando media vista.
+              </p>
+            </div>
+
+            <span class="section-tag">Consulta bajo demanda</span>
+          </div>
+
+          <div class="history-preview" aria-label="Resumen rápido del historial">
+            <article class="history-pill">
+              <h3>Qué verán</h3>
+              <p>Sesiones registradas, referencias asociadas y detalles operativos del servicio.</p>
+            </article>
+
+            <article class="history-pill">
+              <h3>Cómo usarlo</h3>
+              <p>Abran la tabla solo cuando quieran revisar el historial completo o movimientos específicos.</p>
+            </article>
+
+            <article class="history-pill">
+              <h3>Nota</h3>
+              <p>La duración y las horas se deben mostrar en formato limpio desde <code>hub.js</code>, no como reliquias de 1899.</p>
+            </article>
+          </div>
+
+          <div class="panel-toolbar">
+            <button
+              class="btn btn-primary"
+              id="toggleHistoryBtn"
+              type="button"
+              aria-expanded="false"
+              aria-controls="historyCollapse"
+              data-toggle-target="historyCollapse"
+            >
+              Ver historial completo
+            </button>
+
+            <span class="subtle-note">La tabla permanece oculta hasta que ustedes la abran.</span>
+          </div>
+
+          <div
+            id="historyCollapse"
+            class="collapse"
+            aria-hidden="true"
+            hidden
+          >
+            <p class="table-note">
+              La tabla muestra el historial más reciente disponible para esta empresa.
+            </p>
+
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Movimiento</th>
+                    <th>Referencia</th>
+                    <th>Detalle</th>
+                  </tr>
+                </thead>
+
+                <tbody id="usageTable">
+                  <tr>
+                    <td colspan="4">Cargando historial...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <aside class="stack">
+        <section class="section" aria-labelledby="infoTitle">
+          <div class="section-head">
+            <div class="section-title-wrap">
+              <h2 class="section-title" id="infoTitle">Información útil</h2>
+              <p class="section-copy">
+                Datos relevantes del servicio organizados por secciones. Más claro, menos bulla visual. Qué invento tan revolucionario.
+              </p>
+            </div>
+          </div>
+
+          <div class="panel-toolbar" aria-label="Navegación de información útil">
+            <div class="segmented" role="tablist" aria-label="Secciones de información">
+              <button
+                class="segmented-btn is-active"
+                type="button"
+                role="tab"
+                aria-selected="true"
+                aria-controls="infoPanelResumen"
+                id="tabResumen"
+                data-tab-group="info"
+                data-tab-target="infoPanelResumen"
+              >
+                Resumen
+              </button>
+
+              <button
+                class="segmented-btn"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="infoPanelEmpresa"
+                id="tabEmpresa"
+                data-tab-group="info"
+                data-tab-target="infoPanelEmpresa"
+              >
+                Empresa
+              </button>
+
+              <button
+                class="segmented-btn"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="infoPanelBolsa"
+                id="tabBolsa"
+                data-tab-group="info"
+                data-tab-target="infoPanelBolsa"
+              >
+                Bolsa de horas
+              </button>
+
+              <button
+                class="segmented-btn"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="infoPanelTalleres"
+                id="tabTalleres"
+                data-tab-group="info"
+                data-tab-target="infoPanelTalleres"
+              >
+                Talleres
+              </button>
+
+              <button
+                class="segmented-btn"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="infoPanelParticipantes"
+                id="tabParticipantes"
+                data-tab-group="info"
+                data-tab-target="infoPanelParticipantes"
+              >
+                Participantes
+              </button>
+            </div>
+          </div>
+
+          <div class="panel-stack">
+            <section
+              id="infoPanelResumen"
+              class="panel is-active"
+              role="tabpanel"
+              aria-labelledby="tabResumen"
+            >
+              <div class="summary-strip">
+                <article class="summary-item">
+                  <p class="summary-item-label">Empresa</p>
+                  <p class="summary-item-value">Datos de contacto y referencia</p>
+                  <p class="summary-item-help">Consulta general de la cuenta vinculada al servicio.</p>
+                </article>
+
+                <article class="summary-item">
+                  <p class="summary-item-label">Bolsa</p>
+                  <p class="summary-item-value">Estado del paquete</p>
+                  <p class="summary-item-help">Horas compradas, usadas, disponibles y consumo.</p>
+                </article>
+
+                <article class="summary-item">
+                  <p class="summary-item-label">Operación</p>
+                  <p class="summary-item-value">Talleres y participantes</p>
+                  <p class="summary-item-help">Vista resumida de las actividades y personas vinculadas.</p>
+                </article>
+              </div>
+
+              <div class="info-grid" id="infoGrid">
+                <div class="info-card">
+                  <h3>Información cargando</h3>
+                  <p>En un momento aparecerán aquí los datos consolidados del servicio asociado a esta cuenta.</p>
+                </div>
+              </div>
+            </section>
+
+            <section
+              id="infoPanelEmpresa"
+              class="panel"
+              role="tabpanel"
+              aria-labelledby="tabEmpresa"
+            >
+              <div class="info-panel-card">
+                <h3>Empresa cliente</h3>
+                <p>
+                  Esta vista queda lista para mostrar nombre de la empresa, persona de contacto,
+                  teléfono y correo. La idea es que <code>hub.js</code> inyecte esta información aquí
+                  en vez de mezclarla con todo lo demás.
+                </p>
+              </div>
+            </section>
+
+            <section
+              id="infoPanelBolsa"
+              class="panel"
+              role="tabpanel"
+              aria-labelledby="tabBolsa"
+            >
+              <div class="info-panel-card">
+                <h3>Bolsa de horas</h3>
+                <p>
+                  Aquí debería vivir el detalle limpio del paquete: horas compradas, horas usadas,
+                  disponibles, consumo porcentual y minutos registrados.
+                </p>
+              </div>
+            </section>
+
+            <section
+              id="infoPanelTalleres"
+              class="panel"
+              role="tabpanel"
+              aria-labelledby="tabTalleres"
+            >
+              <div class="info-panel-card">
+                <h3>Talleres vinculados</h3>
+                <p>
+                  Esta vista está pensada para listar talleres asociados, cantidad total, estado
+                  y vigencias, sin saturar el resumen principal.
+                </p>
+              </div>
+            </section>
+
+            <section
+              id="infoPanelParticipantes"
+              class="panel"
+              role="tabpanel"
+              aria-labelledby="tabParticipantes"
+            >
+              <div class="info-panel-card">
+                <h3>Participantes</h3>
+                <p>
+                  Aquí deberían mostrarse totales, activos y una lista o muestra representativa
+                  de participantes, solo cuando ustedes entren a verla.
+                </p>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="section" aria-labelledby="termsTitle">
+          <div class="section-head">
+            <div class="section-title-wrap">
+              <h2 class="section-title" id="termsTitle">Términos y condiciones</h2>
+              <p class="section-copy">
+                Consulta aquí lineamientos, alcances y condiciones relacionadas con la prestación del servicio.
+              </p>
+            </div>
+          </div>
+
+          <div class="terms-container" id="termsContainer" aria-live="polite">
+            Cargando términos...
+          </div>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const historyButton = document.getElementById("toggleHistoryBtn");
+      const historyCollapse = document.getElementById("historyCollapse");
+
+      function setHistoryState(isOpen) {
+        if (!historyButton || !historyCollapse) return;
+
+        historyButton.setAttribute("aria-expanded", String(isOpen));
+        historyCollapse.setAttribute("aria-hidden", String(!isOpen));
+        historyCollapse.hidden = !isOpen;
+        historyButton.textContent = isOpen ? "Ocultar historial" : "Ver historial completo";
+
+        if (isOpen) {
+          requestAnimationFrame(() => {
+            historyCollapse.scrollIntoView({
+              behavior: "smooth",
+              block: "start"
+            });
+          });
+        }
+      }
+
+      if (historyButton && historyCollapse) {
+        setHistoryState(false);
+
+        historyButton.addEventListener("click", () => {
+          const isOpen = historyButton.getAttribute("aria-expanded") === "true";
+          setHistoryState(!isOpen);
+        });
+      }
+
+      const tabButtons = Array.from(document.querySelectorAll("[data-tab-group='info']"));
+      const tabPanels = Array.from(document.querySelectorAll(".panel-stack .panel"));
+
+      function activateTab(button) {
+        const targetId = button?.getAttribute("data-tab-target");
+        if (!targetId) return;
+
+        tabButtons.forEach((btn) => {
+          const isActive = btn === button;
+          btn.classList.toggle("is-active", isActive);
+          btn.setAttribute("aria-selected", String(isActive));
+          btn.setAttribute("tabindex", isActive ? "0" : "-1");
+        });
+
+        tabPanels.forEach((panel) => {
+          panel.classList.toggle("is-active", panel.id === targetId);
+        });
+      }
+
+      tabButtons.forEach((button) => {
+        button.addEventListener("click", () => activateTab(button));
+
+        button.addEventListener("keydown", (event) => {
+          const currentIndex = tabButtons.indexOf(button);
+          if (currentIndex === -1) return;
+
+          let nextIndex = null;
+
+          if (event.key === "ArrowRight") {
+            nextIndex = (currentIndex + 1) % tabButtons.length;
+          } else if (event.key === "ArrowLeft") {
+            nextIndex = (currentIndex - 1 + tabButtons.length) % tabButtons.length;
+          }
+
+          if (nextIndex !== null) {
+            event.preventDefault();
+            tabButtons[nextIndex].focus();
+            activateTab(tabButtons[nextIndex]);
+          }
+        });
+      });
+    });
+  </script>
+
+  <script type="module" src="./js/hub.js"></script>
+</body>
+</html>

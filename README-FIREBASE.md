@@ -227,6 +227,42 @@ Por defecto el cálculo corre en el cliente (`USE_CLOUD_FUNCTIONS = false` en
 > `consumoService.js` + `pagosRepo.js`. Si cambias una regla de cálculo,
 > actualiza ambos. El allowlist también está duplicado en `functions/index.js`.
 
+## 8. Portal de clientes (Spaces HUB unificado)
+
+El antiguo "Spaces HUB" (que leía de Apps Script/Sheets) ahora vive en
+**`portal/`** dentro de este proyecto y lee **directo de Firestore** (mismo
+proyecto `spaces-hub`). Es de **solo lectura** y cada cliente ve únicamente su
+propia información: bolsa de horas, paquetes, participantes, sesiones,
+asistencia y pagos.
+
+### Cómo funciona
+- `portalUsers/{correo}` → `{ clienteId, activo }` es el puente. Las reglas de
+  Firestore solo dejan leer documentos cuyo `clienteId` coincida con ese doc,
+  con `activo == true` y **correo verificado**.
+- El portal (`portal/js/hub-data.js`) resuelve el clienteId y arma los datos;
+  `portal/js/hub.js` los renderiza (misma UI del HUB original).
+- Login del portal: correo/contraseña (Firebase Auth, mismo proyecto).
+
+### Dar acceso a un cliente
+1. En Asistencia, abre la ficha del cliente → **🔑 Acceso al portal** →
+   escribe el correo → *Otorgar acceso*. (Desde ahí también se revoca/reactiva.)
+2. Crea la cuenta en Consola Firebase → Authentication → **Add user**
+   (ese correo + contraseña temporal).
+3. El cliente entra a `/portal/`, usa "¿Olvidaste tu contraseña?" para poner la
+   suya, y verifica su correo (el portal envía el enlace automáticamente la
+   primera vez que entra sin verificar).
+
+### Seguridad
+- ⚠️ En Authentication → Settings → **User actions**, desactiva
+  "Enable create (sign-up)" para que nadie pueda registrarse solo.
+- El requisito de `email_verified` en las reglas impide que alguien cree una
+  cuenta con un correo ajeno y lea datos de ese cliente.
+- Despliega siempre las reglas tras cambiarlas:
+  `firebase deploy --only firestore:rules`.
+
+La carpeta hermana `Spaces HUB/` queda como respaldo legacy y se puede borrar
+cuando el portal esté validado (junto con el Apps Script viejo).
+
 ## 7. Funcionalidades cubiertas
 
 CRUD de clientes, paquetes, reservas y asistentes; reservas individuales y

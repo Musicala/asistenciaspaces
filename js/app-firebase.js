@@ -11,6 +11,7 @@ import * as Asistentes from "./data/asistentesRepo.js";
 import { db, collection, onSnapshot } from "./data/base.js";
 import * as Asistencia from "./data/asistenciaRepo.js";
 import * as Pagos from "./data/pagosRepo.js";
+import * as Portal from "./data/portalRepo.js";
 import * as Audit from "./data/auditRepo.js";
 import * as Consumo from "./services/consumoService.js";
 import * as Stats from "./services/statsService.js";
@@ -19,7 +20,7 @@ import { descargarCSV } from "./services/exportService.js";
 import { loadIncludedData, fetchLegacyFromAppsScript, migrateLegacy, LEGACY_DEFAULTS } from "./services/legacyImport.js";
 import {
   TIPO_CLIENTE, ESTADO_RESERVA, ESTADO_ASISTENCIA, REGLA_COBRO_DEFAULT,
-  CONCEPTO_PAGO, METODO_PAGO,
+  CONCEPTO_PAGO, METODO_PAGO, CATEGORIA_PAQUETE,
 } from "./core/constants.js";
 import {
   todayISO, fmtFecha, fmtHM, fechasRecurrentes, hhmmToMin,
@@ -113,6 +114,7 @@ const WRITE_ACTS = new Set([
   "nueva-reserva", "nueva-reserva-masiva", "edit-reserva", "del-reserva",
   "cancelar-reserva", "iniciar-reserva", "cerrar-reserva", "reabrir-reserva",
   "marcar-asistencia", "nuevo-pago", "anular-pago", "cobrar-excedente",
+  "portal-acceso",
 ]);
 
 /* ───────────────────────── tiempo real ───────────────────────── */
@@ -391,6 +393,7 @@ async function viewCliente(id) {
       <div class="toolbar">
         <div class="section-title" style="margin:0">${esc(c.nombre)}</div>
         <div class="actions">
+          <button class="btn-secondary btn-sm" data-act="portal-acceso" data-id="${esc(id)}">🔑 Acceso al portal</button>
           <button class="btn-secondary btn-sm" data-act="edit-cliente" data-id="${esc(id)}">Editar cliente</button>
           <button class="btn-secondary btn-sm" data-act="del-cliente" data-id="${esc(id)}">Eliminar</button>
         </div>
@@ -460,7 +463,7 @@ function paqueteRowHTML(p) {
   const pendiente = Pagos.excedentePendienteMin(p);
   return `<div class="row-card">
     <div class="main">
-      <div class="title">${esc(p.nombre)} <span class="estado ${estado}">${estado.replace("_", " ")}</span></div>
+      <div class="title">${esc(p.nombre)} <span class="estado ${p.categoria === CATEGORIA_PAQUETE.VACACIONAL ? "por_agotarse" : "activo"}">${p.categoria === CATEGORIA_PAQUETE.VACACIONAL ? "vacacional" : "regular"}</span> <span class="estado ${estado}">${estado.replace("_", " ")}</span></div>
       <div class="sub">
         ${p.fechaVencimiento ? `<span>Vence: ${esc(fmtFecha(p.fechaVencimiento))}</span>` : ""}
         ${p.valorPagado ? `<span>$${esc(Number(p.valorPagado).toLocaleString("es-CO"))}</span>` : ""}
@@ -482,6 +485,11 @@ function paqueteRowHTML(p) {
 
 const paqueteFields = (v = {}) => ([
   { name: "nombre", label: "Nombre del paquete", required: true, value: v.nombre || "Paquete de horas" },
+  { name: "categoria", label: "Servicio", type: "select", value: v.categoria || CATEGORIA_PAQUETE.REGULAR,
+    options: [
+      { value: CATEGORIA_PAQUETE.REGULAR, label: "Regular" },
+      { value: CATEGORIA_PAQUETE.VACACIONAL, label: "Vacacionales (bolsa independiente)" },
+    ] },
   { name: "horasCompradas", label: "Horas compradas", type: "number", step: "0.5", required: true, value: v.horasCompradas },
   { name: "valorPagado", label: "Valor pagado", type: "number", value: v.valorPagado },
   { name: "valorHora", label: "Valor hora", type: "number", value: v.valorHora },
@@ -498,6 +506,7 @@ async function nuevoPaquete(clienteId) {
   await withBusy(() => Paquetes.createPaquete({
     clienteId,
     nombre: data.nombre,
+    categoria: data.categoria,
     horasCompradas: Number(data.horasCompradas),
     valorPagado: Number(data.valorPagado),
     valorHora: Number(data.valorHora),
@@ -752,6 +761,78 @@ async function editarAsistente(id, clienteId) {
   toast("Participante actualizado ✅"); render();
 }
 
+/* ───────────────────────── PORTAL DE CLIENTES ───────────────────────── */
+// Gestiona quién puede entrar al Portal (Spaces HUB) para este cliente.
+async function gestionarAccesoPortal(clienteId) {
+  const [c, accesos] = await Promise.all([
+    Clientes.getCliente(clienteId),
+    Portal.listAccesosByCliente(clienteId),
+  ]);
+  if (!c) { toast("Cliente no encontrado", "bad"); return; }
+
+  const listaHTML = accesos.length
+    ? accesos.map((a) => `
+        <div class="row-card" style="margin-top:6px">
+          <div class="main">
+            <div class="title" style="font-size:14px">${esc(a.email)}
+              <span class="estado ${a.activo ? "activo" : "vencido"}">${a.activo ? "activo" : "revocado"}</span></div>
+            ${a.nombre ? `<div class="sub"><span>${esc(a.nombre)}</span></div>` : ""}
+          </div>
+          <div class="actions">
+            ${a.activo
+              ? `<button type="button" class="btn-secondary btn-sm" data-portal-revocar="${esc(a.email)}">Revocar</button>`
+              : `<button type="button" class="btn-secondary btn-sm" data-portal-reactivar="${esc(a.email)}">Reactivar</button>`}
+          </div>
+        </div>`).join("")
+    : `<div class="empty" style="margin-top:6px">Nadie tiene acceso al portal de este cliente todavía.</div>`;
+
+  const data = await openForm({
+    title: `Portal · ${c.nombre}`,
+    okText: "Otorgar acceso",
+    fields: [
+      { name: "email", label: "Correo del cliente (nuevo acceso)", type: "email", value: c.email || "" },
+      { name: "nombre", label: "Nombre de quien ingresa (opcional)", value: c.contactoPrincipal || "" },
+    ],
+    extraHTML: `
+      <div class="dup-warning" style="margin-top:4px">
+        <b>Accesos actuales</b>${listaHTML}
+      </div>
+      <div class="dup-warning" style="margin-top:8px">
+        📌 Para que la persona pueda entrar también necesita una <b>cuenta</b> en
+        Firebase → Authentication → <i>Add user</i> (con ese correo y una contraseña
+        temporal). Luego, desde el portal, puede usar <i>“¿Olvidaste tu contraseña?”</i>
+        para poner la suya y deberá <b>verificar su correo</b> la primera vez.
+      </div>`,
+    onMount: (form) => {
+      form.querySelectorAll("[data-portal-revocar]").forEach((b) =>
+        b.addEventListener("click", async () => {
+          b.disabled = true;
+          try {
+            await Portal.revocarAcceso(b.dataset.portalRevocar);
+            toast(`Acceso revocado: ${b.dataset.portalRevocar}`);
+            b.closest(".row-card")?.querySelector(".estado")?.replaceWith(
+              Object.assign(document.createElement("span"), { className: "estado vencido", textContent: "revocado" }));
+            b.remove();
+          } catch (e) { toast(e.message, "bad"); b.disabled = false; }
+        }));
+      form.querySelectorAll("[data-portal-reactivar]").forEach((b) =>
+        b.addEventListener("click", async () => {
+          b.disabled = true;
+          try {
+            await Portal.otorgarAcceso(b.dataset.portalReactivar, clienteId);
+            toast(`Acceso reactivado: ${b.dataset.portalReactivar}`);
+            b.closest(".row-card")?.querySelector(".estado")?.replaceWith(
+              Object.assign(document.createElement("span"), { className: "estado activo", textContent: "activo" }));
+            b.remove();
+          } catch (e) { toast(e.message, "bad"); b.disabled = false; }
+        }));
+    },
+  });
+  if (!data || !data.email) return;
+  await withBusy(() => Portal.otorgarAcceso(data.email, clienteId, { nombre: data.nombre }));
+  toast(`Acceso al portal otorgado a ${data.email} ✅`);
+}
+
 /* ───────────────────────── RESERVAS ───────────────────────── */
 async function viewReservas() {
   setContext("Reservas");
@@ -844,7 +925,10 @@ async function reservaFields(clienteIdFijo) {
   const cliOpts = clientes.map((c) => ({ value: c.id, label: c.nombre }));
   const clienteId = clienteIdFijo || clientes[0]?.id || "";
   const paquetes = clienteId ? await Paquetes.listPaquetesByCliente(clienteId) : [];
-  const paqOpts = paquetes.map((p) => ({ value: p.id, label: p.nombre }));
+  const paqOpts = paquetes.map((p) => ({
+    value: p.id,
+    label: `${p.categoria === CATEGORIA_PAQUETE.VACACIONAL ? "Vacacionales" : "Regular"} · ${p.nombre}`,
+  }));
   return { cliOpts, paqOpts, clienteId };
 }
 
@@ -859,7 +943,7 @@ function wirePaqueteSelect(form) {
     paqSel.innerHTML = `<option value="">Cargando…</option>`;
     const paquetes = cid ? await Paquetes.listPaquetesByCliente(cid) : [];
     paqSel.innerHTML = paquetes.length
-      ? paquetes.map((p) => `<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join("")
+      ? paquetes.map((p) => `<option value="${esc(p.id)}">${esc(p.categoria === CATEGORIA_PAQUETE.VACACIONAL ? "Vacacionales" : "Regular")} · ${esc(p.nombre)}</option>`).join("")
       : `<option value="">(sin paquetes para este cliente)</option>`;
   };
   cliSel.addEventListener("change", recargar);
@@ -1039,6 +1123,7 @@ function pagoRowHTML(p) {
       <div class="title">${money(p.monto)} <span class="estado ${p.estado === "pagado" ? "activo" : "por_agotarse"}">${esc(p.estado || "")}</span></div>
       <div class="sub">
         <span>${esc(p.concepto)}</span>
+        ${p.paqueteNombre ? `<span>${esc(p.paqueteCategoria === CATEGORIA_PAQUETE.VACACIONAL ? "Vacacionales" : "Regular")} · ${esc(p.paqueteNombre)}</span>` : ""}
         ${p.fecha ? `<span>${esc(fmtFecha(p.fecha))}</span>` : ""}
         ${p.metodo ? `<span>${esc(p.metodo)}</span>` : ""}
         ${p.notas ? `<span>${esc(p.notas)}</span>` : ""}
@@ -1054,6 +1139,7 @@ const pagoFields = (v = {}) => ([
   { name: "concepto", label: "Concepto", type: "select", value: v.concepto || CONCEPTO_PAGO.PAQUETE,
     options: [
       { value: CONCEPTO_PAGO.PAQUETE, label: "Pago de paquete" },
+      { value: CONCEPTO_PAGO.ABONO_VACACIONAL, label: "Abono para Vacacionales" },
       { value: CONCEPTO_PAGO.EXCEDENTE, label: "Excedente" },
       { value: CONCEPTO_PAGO.OTRO, label: "Otro" },
     ] },
@@ -1066,13 +1152,37 @@ const pagoFields = (v = {}) => ([
       { value: METODO_PAGO.OTRO, label: "Otro" },
     ] },
   { name: "fecha", label: "Fecha", type: "date", value: v.fecha || todayISO() },
-  { name: "notas", label: "Notas", type: "textarea", value: v.notas },
+  { name: "notas", label: "Detalle del pago", type: "textarea", value: v.notas,
+    placeholder: "Ej.: mensualidad de julio y saldo destinado a Vacacionales 2026." },
 ]);
 
 async function nuevoPago(clienteId, paqueteId = "") {
-  const data = await openForm({ title: "Registrar pago", fields: pagoFields() });
+  const paquetes = clienteId ? await Paquetes.listPaquetesByCliente(clienteId) : [];
+  const paqueteOpts = [{ value: "", label: "Sin paquete asociado" }, ...paquetes.map((p) => ({
+    value: p.id,
+    label: `${p.categoria === CATEGORIA_PAQUETE.VACACIONAL ? "Vacacionales" : "Regular"} · ${p.nombre}`,
+  }))];
+  const data = await openForm({
+    title: "Registrar pago",
+    fields: [
+      { name: "paqueteId", label: "Paquete al que aplica", type: "select", value: paqueteId, options: paqueteOpts },
+      ...pagoFields(),
+    ],
+    extraHTML: `<div class="dup-warning">Para un abono vacacional selecciona el paquete <b>Vacacionales</b>. Su saldo nunca se mezcla con el servicio regular.</div>`,
+  });
   if (!data) return;
-  await withBusy(() => Pagos.createPago({ ...data, clienteId, paqueteId, monto: Number(data.monto) }));
+  const paqueteSeleccionado = paquetes.find((p) => p.id === data.paqueteId);
+  if (data.concepto === CONCEPTO_PAGO.ABONO_VACACIONAL && paqueteSeleccionado?.categoria !== CATEGORIA_PAQUETE.VACACIONAL) {
+    toast("Un abono vacacional debe asociarse a un paquete de Vacacionales.", "warn"); return;
+  }
+  await withBusy(() => Pagos.createPago({
+    ...data,
+    clienteId,
+    paqueteId: data.paqueteId || paqueteId,
+    paqueteNombre: paqueteSeleccionado?.nombre || "",
+    paqueteCategoria: paqueteSeleccionado?.categoria || "",
+    monto: Number(data.monto),
+  }));
   toast("Pago registrado ✅"); render();
 }
 
@@ -1389,6 +1499,7 @@ document.addEventListener("click", async (ev) => {
       case "nuevo-pago": return nuevoPago(id);
       case "anular-pago": return anularPago(id);
       case "cobrar-excedente": return cobrarExcedente(id);
+      case "portal-acceso": return gestionarAccesoPortal(id);
       case "export-pagos": return exportPagos();
       case "export-clientes": return exportClientes();
       case "export-reservas": return exportReservas();
