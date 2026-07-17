@@ -109,7 +109,7 @@ const adminOnly = (label) => {
 const WRITE_ACTS = new Set([
   "nuevo-cliente", "edit-cliente", "del-cliente",
   "nuevo-paquete", "del-paquete",
-  "nuevo-asistente", "edit-asistente",
+  "nuevo-asistente", "edit-asistente", "importar-asistentes",
   "nueva-reserva", "nueva-reserva-masiva", "edit-reserva", "del-reserva",
   "cancelar-reserva", "iniciar-reserva", "cerrar-reserva", "reabrir-reserva",
   "marcar-asistencia", "nuevo-pago", "anular-pago", "cobrar-excedente",
@@ -347,6 +347,30 @@ async function editarCliente(id) {
 }
 
 /* ───────────────────────── CLIENTE DETALLE ───────────────────────── */
+// Pestaña activa en la ficha del cliente; se conserva entre re-renders.
+let clienteTabActual = "reservas";
+
+function clienteTabsHTML(counts) {
+  const tabs = [
+    ["reservas", "Reservas", counts.reservas],
+    ["participantes", "Participantes", counts.participantes],
+    ["paquetes", "Paquetes", counts.paquetes],
+    ["pagos", "Pagos", counts.pagos],
+  ];
+  return `<div class="cliente-tabs">${tabs.map(([key, label, n]) =>
+    `<button class="tab-btn ${clienteTabActual === key ? "active" : ""}" data-act="cliente-tab" data-tab="${key}">${label}${n ? ` <span class="tab-count">${n}</span>` : ""}</button>`
+  ).join("")}</div>`;
+}
+
+function cambiarClienteTab(tab) {
+  clienteTabActual = tab;
+  document.querySelectorAll("[data-act='cliente-tab']").forEach((b) =>
+    b.classList.toggle("active", b.dataset.tab === tab));
+  document.querySelectorAll("[data-tabsec]").forEach((sec) => {
+    sec.style.display = sec.dataset.tabsec === tab ? "" : "none";
+  });
+}
+
 async function viewCliente(id) {
   const c = await Clientes.getCliente(id);
   if (!c) return frag(`<div class="card"><div class="empty">Cliente no encontrado.</div></div>`);
@@ -381,7 +405,9 @@ async function viewCliente(id) {
       </div>
     </div>
 
-    <div class="card">
+    ${clienteTabsHTML({ reservas: reservas.length, participantes: asistentes.length, paquetes: paquetes.length, pagos: pagos.length })}
+
+    <div class="card" data-tabsec="paquetes" ${clienteTabActual === "paquetes" ? "" : `style="display:none"`}>
       <div class="toolbar">
         <div class="section-title" style="margin:0">Paquetes</div>
         <button class="btn-primary btn-sm" data-act="nuevo-paquete" data-id="${esc(id)}">+ Paquete</button>
@@ -391,7 +417,7 @@ async function viewCliente(id) {
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" data-tabsec="reservas" ${clienteTabActual === "reservas" ? "" : `style="display:none"`}>
       <div class="toolbar">
         <div class="section-title" style="margin:0">Reservas del cliente</div>
         <button class="btn-primary btn-sm" data-act="nueva-reserva" data-id="${esc(id)}">+ Reserva</button>
@@ -399,7 +425,7 @@ async function viewCliente(id) {
       ${reservas.length ? listaReservasHTML(reservas) : `<div class="empty">Sin reservas.</div>`}
     </div>
 
-    <div class="card">
+    <div class="card" data-tabsec="pagos" ${clienteTabActual === "pagos" ? "" : `style="display:none"`}>
       <div class="toolbar">
         <div class="section-title" style="margin:0">Pagos · total ${money(totalPagado)}</div>
         <button class="btn-primary btn-sm" data-act="nuevo-pago" data-id="${esc(id)}">+ Registrar pago</button>
@@ -409,10 +435,13 @@ async function viewCliente(id) {
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" data-tabsec="participantes" ${clienteTabActual === "participantes" ? "" : `style="display:none"`}>
       <div class="toolbar">
         <div class="section-title" style="margin:0">Participantes</div>
-        <button class="btn-primary btn-sm" data-act="nuevo-asistente" data-id="${esc(id)}">+ Participante</button>
+        <div class="actions">
+          <button class="btn-secondary btn-sm" data-act="importar-asistentes" data-id="${esc(id)}">⇪ Importar lista</button>
+          <button class="btn-primary btn-sm" data-act="nuevo-asistente" data-id="${esc(id)}">+ Participante</button>
+        </div>
       </div>
       <div class="list-grid">
         ${asistentes.length ? asistentes.map(asistenteRowHTML).join("") : `<div class="empty">Sin participantes. Son las personas que asisten a las sesiones de este cliente.</div>`}
@@ -578,6 +607,141 @@ async function resolverDuplicado(clienteId, data, duplicados) {
   const agregados = CAMPOS_FUSION.filter(([c]) => patch[c]).map(([, lbl]) => lbl).join(", ");
   await withBusy(() => Asistentes.updateAsistente(objetivo.id, patch));
   toast(`Datos agregados a ${objetivo.nombreCompleto}: ${agregados} ✅`); render();
+}
+
+/* ── Importación masiva de participantes (CSV / texto pegado / IA) ── */
+
+const PROMPT_IA_PARTICIPANTES = `Te comparto una lista de personas (puede ser una foto, un Excel, un PDF o texto). Extrae los datos y devuélvelos ÚNICAMENTE como CSV separado por punto y coma (;), sin ningún texto adicional antes ni después, con exactamente estas columnas en la primera fila:
+
+nombreCompleto;documento;telefono;email;acudienteNombre;acudienteTelefono
+
+Reglas:
+- Una fila por persona. Si un dato no aparece, deja el campo vacío (pero conserva los ;).
+- Teléfonos: solo dígitos, con indicativo si aparece (ej: 3101234567).
+- Emails en minúsculas.
+- No inventes datos que no estén en la fuente.
+- Si un nombre está en formato "Apellidos, Nombres", conviértelo a "Nombres Apellidos".`;
+
+// Normaliza encabezados: "Nombre completo" / "NOMBRE" / "teléfono" → clave interna.
+function claveHeader(h) {
+  const n = String(h || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z]/g, "");
+  if (n.includes("acudiente") && (n.includes("tel") || n.includes("cel"))) return "acudienteTelefono";
+  if (n.includes("acudiente")) return "acudienteNombre";
+  if (n.includes("nombre")) return "nombreCompleto";
+  if (n.includes("documento") || n.includes("cedula") || n === "doc" || n.includes("identificacion")) return "documento";
+  if (n.includes("tel") || n.includes("cel") || n.includes("movil")) return "telefono";
+  if (n.includes("mail") || n.includes("correo")) return "email";
+  return null;
+}
+
+function parseParticipantes(text) {
+  const t = String(text || "").trim();
+  if (!t) return [];
+  const primera = t.split("\n")[0];
+  const delimiter = [";", ",", "\t"].reduce((a, b) =>
+    primera.split(b).length > primera.split(a).length ? b : a);
+  const rows = Importer.parseCSV(t, { delimiter });
+  return rows.map((r) => {
+    const o = { nombreCompleto: "", documento: "", telefono: "", email: "", acudienteNombre: "", acudienteTelefono: "" };
+    for (const [h, v] of Object.entries(r)) {
+      const k = claveHeader(h);
+      if (k && v) o[k] = String(v).trim();
+    }
+    return o;
+  }).filter((o) => o.nombreCompleto);
+}
+
+const normKey = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
+
+async function importarAsistentesUI(clienteId) {
+  const res = await openForm({
+    title: "Importar participantes",
+    okText: "Procesar lista",
+    fields: [{ name: "datos", label: "Pega aquí la lista (CSV con encabezados)", type: "textarea",
+      placeholder: "nombreCompleto;documento;telefono;email;acudienteNombre;acudienteTelefono" }],
+    extraHTML: `
+      <div class="dup-warning" style="margin-top:4px">
+        <b>¿Tienes una foto, Excel o PDF con la lista?</b><br>
+        1. Copia el prompt con el botón de abajo.<br>
+        2. Pégalo en una IA (ChatGPT, Claude, Gemini…) junto con la foto o archivo.<br>
+        3. Copia la respuesta y pégala en el cuadro de arriba, o sube el .csv aquí.
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+        <button type="button" class="btn-secondary btn-sm" data-copy-prompt>📋 Copiar prompt para la IA</button>
+        <label class="btn-secondary btn-sm" style="cursor:pointer;display:inline-flex;align-items:center">
+          📄 Subir archivo .csv / .txt
+          <input type="file" accept=".csv,.txt,text/csv,text/plain" data-file-import style="display:none">
+        </label>
+      </div>`,
+    onMount: (form) => {
+      form.querySelector("[data-copy-prompt]")?.addEventListener("click", async (ev) => {
+        try { await navigator.clipboard.writeText(PROMPT_IA_PARTICIPANTES); }
+        catch (_) {
+          const ta = document.createElement("textarea");
+          ta.value = PROMPT_IA_PARTICIPANTES; document.body.appendChild(ta);
+          ta.select(); document.execCommand("copy"); ta.remove();
+        }
+        ev.target.textContent = "✅ Prompt copiado";
+      });
+      form.querySelector("[data-file-import]")?.addEventListener("change", async (ev) => {
+        const f = ev.target.files?.[0];
+        if (!f) return;
+        const texto = await f.text();
+        const campo = form.querySelector("[name='datos']");
+        if (campo) campo.value = texto;
+      });
+    },
+  });
+  if (!res) return;
+
+  const items = parseParticipantes(res.datos);
+  if (!items.length) {
+    toast("No se encontraron filas válidas. Revisa que la primera fila tenga encabezados y que cada persona tenga nombre.", "bad");
+    return;
+  }
+
+  // Dedupe contra existentes (doc, email o nombre) y dentro del mismo lote.
+  const existentes = await Asistentes.listAsistentesByCliente(clienteId);
+  const docsVistos = new Set(existentes.map((a) => normKey(a.documento)).filter(Boolean));
+  const mailsVistos = new Set(existentes.map((a) => normKey(a.email)).filter(Boolean));
+  const nombresVistos = new Set(existentes.map((a) => normKey(a.nombreCompleto)).filter(Boolean));
+
+  const nuevos = []; const omitidos = [];
+  for (const it of items) {
+    const d = normKey(it.documento), m = normKey(it.email), n = normKey(it.nombreCompleto);
+    if ((d && docsVistos.has(d)) || (m && mailsVistos.has(m)) || (n && nombresVistos.has(n))) {
+      omitidos.push(it.nombreCompleto);
+      continue;
+    }
+    if (d) docsVistos.add(d); if (m) mailsVistos.add(m); if (n) nombresVistos.add(n);
+    nuevos.push(it);
+  }
+
+  const previa = nuevos.slice(0, 8).map((x) => `<li>${esc(x.nombreCompleto)}${x.documento ? ` — ${esc(x.documento)}` : ""}</li>`).join("");
+  const conf = await openForm({
+    title: "Confirmar importación",
+    okText: `Importar ${nuevos.length}`,
+    fields: [],
+    extraHTML: `<div class="dup-warning">
+      Se importarán <b>${nuevos.length}</b> participante(s).${omitidos.length ? `<br>Se omitirán <b>${omitidos.length}</b> por ya existir: ${esc(omitidos.slice(0, 5).join(", "))}${omitidos.length > 5 ? "…" : ""}.` : ""}
+      ${previa ? `<ul style="margin:6px 0 0 18px">${previa}${nuevos.length > 8 ? `<li>… y ${nuevos.length - 8} más</li>` : ""}</ul>` : ""}
+    </div>`,
+  });
+  if (!conf || !nuevos.length) {
+    if (conf && !nuevos.length) toast("Todos ya existían; no se importó ninguno.", "warn");
+    return;
+  }
+
+  const r = await withBusy(async () => {
+    let ok = 0, error = 0;
+    for (const it of nuevos) {
+      try { await Asistentes.createAsistente({ clienteId, ...it }, { forzar: true }); ok++; }
+      catch (e) { console.error(e); error++; }
+    }
+    return { ok, error };
+  });
+  toast(`Importados ${r.ok} participante(s)${r.error ? ` · ${r.error} con error` : ""}${omitidos.length ? ` · ${omitidos.length} omitidos por duplicado` : ""} ✅`);
+  render();
 }
 
 async function editarAsistente(id, clienteId) {
@@ -1202,10 +1366,12 @@ document.addEventListener("click", async (ev) => {
       case "goto-alertas": return navTo("alertas");
       case "open-cliente": if (!ev.target.closest("[data-act='edit-cliente']")) return navTo("cliente", { id });
         return;
+      case "cliente-tab": return cambiarClienteTab(btn.dataset.tab);
       case "nuevo-cliente": return nuevoCliente();
       case "edit-cliente": ev.stopPropagation(); return editarCliente(id);
       case "nuevo-paquete": return nuevoPaquete(id);
       case "nuevo-asistente": return nuevoAsistente(id);
+      case "importar-asistentes": return importarAsistentesUI(id);
       case "edit-asistente": return editarAsistente(id, btn.dataset.cliente);
       case "nueva-reserva": return nuevaReserva(id);
       case "nueva-reserva-masiva": return nuevaReservaMasiva();

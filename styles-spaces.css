@@ -101,6 +101,14 @@ body:not([data-role="admin"]) [data-nav="auditoria"]{ display:none !important; }
 .btn-secondary.danger:hover{ background:rgba(220,38,38,.08); border-color:rgba(220,38,38,.55); }
 .back-link{ background:none; border:none; color:var(--mozart); cursor:pointer; font-weight:700; padding:0; margin-bottom:6px; }
 
+/* ---------- Pestañas ficha cliente ---------- */
+.cliente-tabs{ display:flex; gap:8px; flex-wrap:wrap; margin:14px 0; position:sticky; top:0; z-index:5; background:var(--bg,transparent); padding:6px 0; }
+.tab-btn{ padding:9px 16px; border-radius:999px; border:1px solid var(--line); background:var(--card2); cursor:pointer; font-weight:800; font-size:13px; color:var(--muted); }
+.tab-btn:hover{ border-color:rgba(12,65,196,.30); }
+.tab-btn.active{ background:var(--mozart,#0c41c4); border-color:var(--mozart,#0c41c4); color:#fff; }
+.tab-count{ display:inline-block; min-width:20px; padding:1px 6px; border-radius:999px; background:rgba(0,0,0,.12); font-size:11.5px; text-align:center; }
+.tab-btn.active .tab-count{ background:rgba(255,255,255,.22); }
+
 /* ---------- Chips de asistencia ---------- */
 .chip{ width:44px; height:40px; display:inline-flex; align-items:center; justify-content:center; border-radius:14px; border:1px solid var(--line); background:var(--card2); cursor:pointer; font-size:16px; }
 .chip:hover{ border-color:rgba(12,65,196,.30); }
