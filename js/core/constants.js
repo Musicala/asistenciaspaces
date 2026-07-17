@@ -47,8 +47,13 @@ export const FUNCTIONS_REGION = "us-central1";
 // Pagos / cobros
 export const CONCEPTO_PAGO = Object.freeze({
   PAQUETE: "paquete",       // pago del paquete de horas
+  ABONO_VACACIONAL: "abono_vacacional", // saldo destinado únicamente a Vacacionales
   EXCEDENTE: "excedente",   // cobro de horas excedidas
   OTRO: "otro",
+});
+export const CATEGORIA_PAQUETE = Object.freeze({
+  REGULAR: "regular",
+  VACACIONAL: "vacacional",
 });
 export const METODO_PAGO = Object.freeze({
   EFECTIVO: "efectivo",

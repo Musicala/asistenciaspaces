@@ -1,9 +1,14 @@
 rules_version = '2';
 
 // Asistencia Spaces — reglas Firestore
-// Modelo de seguridad: SOLO usuarios autenticados con Google cuyo correo esté
-// en el allowlist pueden leer/escribir. La misma lista vive en
-// js/core/constants.js (AUTHORIZED_EMAILS) — mantener ambas sincronizadas.
+// Modelo de seguridad:
+//  1) STAFF: usuarios autenticados con Google cuyo correo esté en el allowlist
+//     pueden leer/escribir. La misma lista vive en js/core/constants.js
+//     (AUTHORIZED_EMAILS) — mantener ambas sincronizadas.
+//  2) PORTAL (clientes): usuarios con cuenta email/contraseña autorizados vía
+//     un documento en portalUsers/{correo} (creado desde Asistencia). Solo
+//     LECTURA y solo de los documentos de SU clienteId. Se exige correo
+//     verificado para impedir que alguien registre un correo ajeno.
 //
 // Roles (admin/operacion/consulta/finanzas) están preparados vía la función
 // canWrite(). Hoy todos los autorizados pueden operar; para endurecer, restringe
@@ -37,32 +42,63 @@ service cloud.firestore {
         ];
     }
 
+    // ── Portal de clientes ──────────────────────────────────────
+    // portalUsers/{correo-en-minusculas} → { clienteId, activo, ... }
+    function portalDoc() {
+      return get(/databases/$(database)/documents/portalUsers/$(request.auth.token.email)).data;
+    }
+
+    function isPortalUser() {
+      return isSignedIn()
+        && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/portalUsers/$(request.auth.token.email))
+        && portalDoc().activo == true;
+    }
+
+    // ¿El usuario del portal es dueño de este clienteId?
+    function portalOwns(clienteId) {
+      return isPortalUser() && portalDoc().clienteId == clienteId;
+    }
+
+    match /portalUsers/{email} {
+      // El cliente puede leer SU propio doc de acceso (para saber su clienteId).
+      // No exigimos email_verified aquí: el portal necesita leerlo para
+      // decidir qué pantalla mostrar (incluida la de "verifica tu correo").
+      allow get: if canRead()
+        || (isSignedIn() && request.auth.token.email == email);
+      allow list: if canRead();
+      allow write: if canWrite();
+    }
+
     match /clientes/{id} {
-      allow read: if canRead();
+      allow get: if canRead() || portalOwns(id);
+      allow list: if canRead();
       allow write: if canWrite();
     }
 
     match /paquetes/{id} {
-      allow read: if canRead();
+      allow read: if canRead() || portalOwns(resource.data.clienteId);
       allow write: if canWrite();
     }
 
     match /asistentes/{id} {
-      allow read: if canRead();
+      allow read: if canRead() || portalOwns(resource.data.clienteId);
       allow write: if canWrite();
     }
 
     match /pagos/{id} {
-      allow read: if canRead();
+      allow read: if canRead() || portalOwns(resource.data.clienteId);
       allow write: if canWrite();
     }
 
     match /reservas/{id} {
-      allow read: if canRead();
+      allow read: if canRead() || portalOwns(resource.data.clienteId);
       allow write: if canWrite();
 
       match /asistencia/{asistenteId} {
-        allow read: if canRead();
+        // El portal puede leer la asistencia si la reserva padre es suya.
+        allow read: if canRead()
+          || portalOwns(get(/databases/$(database)/documents/reservas/$(id)).data.clienteId);
         allow write: if canWrite();
       }
     }

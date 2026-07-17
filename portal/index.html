@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
+  <title>Spaces HUB | Acceso clientes</title>
+
+  <meta
+    name="description"
+    content="Portal de acceso para clientes de Spaces. Consulta tu información, sesiones, asistencia y detalles del servicio en un solo lugar."
+  />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="color-scheme" content="light only" />
+
+  <meta property="og:title" content="Spaces HUB | Acceso clientes" />
+  <meta
+    property="og:description"
+    content="Ingresa al HUB de Spaces para consultar tu proceso, asistencia e información del servicio."
+  />
+  <meta property="og:type" content="website" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+
+  <link rel="icon" href="./assets/favicon.png" />
+  <link rel="apple-touch-icon" href="./assets/favicon.png" />
+
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body class="auth-page">
+  <a href="#mainContent" class="skip-link">Saltar al contenido principal</a>
+
+  <div class="bg-orb orb-1" aria-hidden="true"></div>
+  <div class="bg-orb orb-2" aria-hidden="true"></div>
+  <div class="bg-grid" aria-hidden="true"></div>
+
+  <main id="mainContent" class="auth-shell">
+    <section class="auth-hero" aria-label="Información general del portal">
+      <div class="brand-chip">Spaces HUB</div>
+
+      <div class="brand-block">
+        <div class="logo-wrap">
+          <img
+            src="./assets/logo.png"
+            alt="Logo de Spaces"
+            class="brand-logo"
+            onerror="this.style.display='none'"
+          />
+        </div>
+
+        <h1 class="auth-title">
+          Tu espacio, tus sesiones y tu información en un solo lugar.
+        </h1>
+
+        <p class="auth-subtitle">
+          Ingresa con tu correo para revisar el estado de tu proceso, tus sesiones,
+          tu asistencia y la información importante de tu servicio en Spaces.
+        </p>
+      </div>
+
+      <div class="hero-points" aria-label="Beneficios del portal">
+        <article class="hero-card">
+          <span class="hero-card-icon" aria-hidden="true">🗂️</span>
+          <div>
+            <h2>Todo centralizado</h2>
+            <p>Consulta tu información del servicio desde un solo lugar, sin perderte entre mensajes y archivos.</p>
+          </div>
+        </article>
+
+        <article class="hero-card">
+          <span class="hero-card-icon" aria-hidden="true">📅</span>
+          <div>
+            <h2>Seguimiento claro</h2>
+            <p>Revisa sesiones, asistencia, fechas importantes y detalles de tu proceso de forma simple.</p>
+          </div>
+        </article>
+
+        <article class="hero-card">
+          <span class="hero-card-icon" aria-hidden="true">🔐</span>
+          <div>
+            <h2>Acceso personal</h2>
+            <p>Tu cuenta muestra únicamente la información asociada a tu correo registrado en el sistema.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="auth-panel" aria-label="Formulario de acceso">
+      <div class="auth-card">
+        <div class="auth-card-head">
+          <p class="eyebrow">Acceso clientes</p>
+          <h2>Iniciar sesión</h2>
+          <p class="auth-copy">
+            Usa el correo con el que fue creado tu acceso en el HUB.
+          </p>
+        </div>
+
+        <form id="loginForm" class="auth-form" novalidate autocomplete="on">
+          <div class="field">
+            <label for="email">Correo electrónico</label>
+            <div class="input-wrap">
+              <input
+                id="email"
+                name="email"
+                type="email"
+                inputmode="email"
+                autocomplete="email"
+                placeholder="tucorreo@ejemplo.com"
+                required
+                aria-describedby="emailHelp"
+              />
+            </div>
+            <small id="emailHelp" class="field-help">
+              Debe coincidir con el correo registrado para tu acceso.
+            </small>
+          </div>
+
+          <div class="field">
+            <div class="field-top">
+              <label for="password">Contraseña</label>
+              <button
+                type="button"
+                id="togglePassword"
+                class="text-btn"
+                aria-label="Mostrar u ocultar contraseña"
+                aria-controls="password"
+                aria-pressed="false"
+              >
+                Mostrar
+              </button>
+            </div>
+
+            <div class="input-wrap">
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                placeholder="••••••••"
+                required
+                aria-describedby="passwordHelp"
+              />
+            </div>
+            <small id="passwordHelp" class="field-help">
+              Ingresa la contraseña asignada a tu cuenta.
+            </small>
+          </div>
+
+          <div class="auth-row">
+            <label class="check" for="rememberSession">
+              <input type="checkbox" id="rememberSession" name="rememberSession" />
+              <span>Recordar sesión en este dispositivo</span>
+            </label>
+          </div>
+
+          <div
+            id="authMessage"
+            class="auth-message"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          ></div>
+
+          <div class="auth-actions">
+            <button type="submit" id="loginBtn" class="btn btn-primary">
+              <span class="btn-label">Ingresar</span>
+              <span class="btn-spinner" aria-hidden="true"></span>
+            </button>
+
+            <button
+              type="button"
+              id="resetPasswordBtn"
+              class="btn btn-secondary"
+            >
+              Recuperar contraseña
+            </button>
+          </div>
+        </form>
+
+        <div class="auth-footer">
+          <p>
+            Si aún no tienes acceso o necesitas ayuda con tu cuenta, comunícate con administración de Spaces.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <noscript>
+    <div class="noscript-banner">
+      Esta página necesita JavaScript para funcionar correctamente.
+    </div>
+  </noscript>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
